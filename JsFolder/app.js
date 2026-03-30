@@ -331,7 +331,7 @@ function buildProductCard(product) {
   card.innerHTML = `
     <div class="product-img">
       <a href="product.html?id=${product.id}" style="display:block;height:100%">
-        <img class="product-img-el" src="${imgSrc}" alt="${product.name}" loading="lazy" onerror="this.onerror=null;this.src='../images/placeholder.svg'">
+        <img class="product-img-el" src="${imgSrc}" alt="${product.name}" loading="lazy" onerror="this.onerror=null;this.src='./images/placeholder.svg'">
       </a>
       ${outOfStock ? '<div class="product-badge out">Sold Out</div>' : isLow ? '<div class="product-badge">Last ' + product.stock + '</div>' : ''}
       <button class="btn-wishlist ${isWished ? 'active' : ''}" data-id="${product.id}" aria-label="Add to Wishlist">

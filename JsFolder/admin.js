@@ -103,7 +103,7 @@ function renderProducts() {
     img.className = 'admin-product-img';
     img.src = imgSrc;
     img.alt = product.name;
-    img.onerror = function() { this.onerror = null; this.src = '../images/placeholder.svg'; };
+    img.onerror = function() { this.onerror = null; this.src = './images/placeholder.svg'; };
 
     const infoDiv = document.createElement('div');
     const nameDiv = document.createElement('div');

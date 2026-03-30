@@ -1,10 +1,10 @@
 // =========================================
 //  SUSPENDRE — Product Data
-//  Images live in: ../images/
+//  Images live in: ./images/
 //  Naming: lowercase, hyphens, e.g. walnut-prestige.jpg
 // =========================================
 
-const PLACEHOLDER_IMAGE = '../images/placeholder.svg';
+const PLACEHOLDER_IMAGE = './images/placeholder.svg';
 
 const DEFAULT_PRODUCTS = [
   {
@@ -14,7 +14,7 @@ const DEFAULT_PRODUCTS = [
     price: 289,
     stock: 15,
     description: 'Single-origin black walnut, hand-planed and finished with cold-pressed linseed oil. The grain speaks.',
-    image: '../images/luxury_HangerV1.png',
+    image: './images/luxury_HangerV1.png',
     featured: true
   },
   {
@@ -24,7 +24,7 @@ const DEFAULT_PRODUCTS = [
     price: 890,
     stock: 5,
     description: 'Solid brass core, hand-applied 24K gold leaf finish. A statement for the truly discerning wardrobe.',
-    image: '../images/luxury_HangerV2.png',
+    image: './images/luxury_HangerV2.png',
     featured: true
   },
   {
@@ -34,7 +34,7 @@ const DEFAULT_PRODUCTS = [
     price: 185,
     stock: 22,
     description: 'French silk velvet in deep midnight, hand-stretched over a maple core. Prevents slippage without effort.',
-    image: '../images/luxury_HangerV3.png',
+    image: './images/luxury_HangerV3.png',
     featured: true
   },
   {
@@ -44,7 +44,7 @@ const DEFAULT_PRODUCTS = [
     price: 340,
     stock: 10,
     description: 'Brushed 316L surgical steel with geometric precision. Industrial luxury for the modernist.',
-    image: '../images/chrome-architecte.jpg',
+    image: './images/chrome-architecte.jpg',
     featured: true
   },
   {
@@ -54,7 +54,7 @@ const DEFAULT_PRODUCTS = [
     price: 420,
     stock: 8,
     description: 'Aged Cuban mahogany, hand-carved with Art Deco detail. Each piece unique, each piece eternal.',
-    image: '../images/luxury_HangerV5.png',
+    image: './images/luxury_HangerV5.png',
     featured: false
   },
   {
@@ -64,7 +64,7 @@ const DEFAULT_PRODUCTS = [
     price: 210,
     stock: 18,
     description: 'Ivory French velvet over lightweight balsa. Pure elegance at a featherweight.',
-    image: '../images/luxury_HangerV6.png',
+    image: './images/luxury_HangerV6.png',
     featured: false
   },
   {
@@ -74,7 +74,7 @@ const DEFAULT_PRODUCTS = [
     price: 560,
     stock: 6,
     description: 'Grade 5 aerospace titanium, CNC machined to 0.01mm tolerance. Lighter than air, stronger than time.',
-    image: '../images/luxury_HangerV7.png',
+    image: './images/luxury_HangerV7.png',
     featured: false
   },
   {
@@ -84,7 +84,7 @@ const DEFAULT_PRODUCTS = [
     price: 740,
     stock: 4,
     description: '18K rose gold plated over solid brass. The most romantic hanger ever conceived.',
-    image: '../images/luxury_HangerV8.png',
+    image: './images/luxury_HangerV8.png',
     featured: false
   },
   {
@@ -94,7 +94,7 @@ const DEFAULT_PRODUCTS = [
     price: 650,
     stock: 3,
     description: 'African ebony, one of the densest woods on Earth. Hand-oiled to reveal a natural lustre that deepens with age.',
-    image: '../images/ebony-noir.jpg',
+    image: './images/ebony-noir.jpg',
     featured: false
   },
   {
@@ -104,7 +104,7 @@ const DEFAULT_PRODUCTS = [
     price: 195,
     stock: 0,
     description: "Champagne silk velvet. Discontinued colourway — a collector's piece for the true connoisseur.",
-    image: '../images/champagne-velours.jpg',
+    image: './images/champagne-velours.jpg',
     featured: false
   }
 ];

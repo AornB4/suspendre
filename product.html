@@ -1,21 +1,27 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Product Details — SUSPENDRE</title>
-  <link rel="stylesheet" href="../cssFolder/styles.css" />
-  <link rel="stylesheet" href="../cssFolder/product.css" />
+  <link rel="icon" type="image/png" href="images/favicon.png" />
+  <link rel="stylesheet" href="cssFolder/styles.css" />
+  <link rel="stylesheet" href="cssFolder/product.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Jost:wght@200;300;400;500&display=swap" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Jost:wght@200;300;400;500&display=swap"
+    rel="stylesheet">
 </head>
+
 <body class="product-body">
   <nav class="navbar" id="navbar">
     <div class="nav-logo"><a href="index.html">SUSPENDRE</a></div>
     <ul class="nav-links" id="navLinks">
       <li><a href="index.html">Home</a></li>
       <li><a href="shop.html">Shop</a></li>
-      <li id="navCartItem" style="display:none"><a href="cart.html">Cart <span class="cart-count" id="cartCount">0</span></a></li>
+      <li id="navCartItem" style="display:none"><a href="cart.html">Cart <span class="cart-count"
+            id="cartCount">0</span></a></li>
       <li id="navLoginItem"><a href="login.html">Login</a></li>
       <li id="navSignupItem"><a href="signup.html" class="btn-nav">Sign Up</a></li>
       <li id="navLogoutItem" style="display:none"><a href="#" id="logoutBtn">Logout</a></li>
@@ -32,7 +38,7 @@
       <br>
       <a href="shop.html" class="btn-outline">Return to Shop</a>
     </div>
-    
+
     <div id="pdpContent" class="pdp-layout" style="display:none;">
       <div class="pdp-gallery">
         <img id="pdpMainImage" src="" alt="Product Image" class="pdp-main-img">
@@ -41,7 +47,7 @@
         <div class="pdp-breadcrumbs"><a href="shop.html">Shop</a> / <span id="pdpBreadcrumbCategory"></span></div>
         <h1 class="pdp-title" id="pdpTitle"></h1>
         <p class="pdp-price" id="pdpPrice"></p>
-        
+
         <p class="pdp-desc" id="pdpDesc"></p>
 
         <ul class="pdp-features">
@@ -51,32 +57,43 @@
         </ul>
 
         <div class="pdp-stock-status" id="pdpStockStatus"></div>
-        
+
         <div class="pdp-actions" style="display:flex; gap:16px;">
           <button id="pdpAddBtn" class="btn-primary" style="flex:1;">Add to Cart</button>
-          <button id="pdpWishBtn" class="btn-outline" style="width:56px; padding:0; display:flex; align-items:center; justify-content:center; flex-shrink:0; transition: color 0.2s, border-color 0.2s;" aria-label="Add to Wishlist">
-            <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" id="pdpWishSvg"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+          <button id="pdpWishBtn" class="btn-outline"
+            style="width:56px; padding:0; display:flex; align-items:center; justify-content:center; flex-shrink:0; transition: color 0.2s, border-color 0.2s;"
+            aria-label="Add to Wishlist">
+            <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none"
+              id="pdpWishSvg">
+              <path
+                d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z">
+              </path>
+            </svg>
           </button>
         </div>
 
         <div class="pdp-accordion">
           <details open>
             <summary>The Art of Suspendre</summary>
-            <p>Every piece is sculptured to ensure your garments drape flawlessly, preserving immaculate shoulders and completely preventing creasing over decades of daily wardrobe storage.</p>
+            <p>Every piece is sculptured to ensure your garments drape flawlessly, preserving immaculate shoulders and
+              completely preventing creasing over decades of daily wardrobe storage.</p>
           </details>
           <details>
             <summary>Shipping & Returns</summary>
-            <p>Complimentary worldwide shipping on sets of five or more. We offer a 30-day hassle-free return policy if you aren't completely satisfied with your hangers.</p>
+            <p>Complimentary worldwide shipping on sets of five or more. We offer a 30-day hassle-free return policy if
+              you aren't completely satisfied with your hangers.</p>
           </details>
         </div>
       </div>
     </div>
 
     <!-- Reviews Section -->
-    <section id="pdpReviews" class="pdp-reviews-section" style="display:none; margin-top:80px; padding-top:80px; border-top:1px solid var(--border-light);">
+    <section id="pdpReviews" class="pdp-reviews-section"
+      style="display:none; margin-top:80px; padding-top:80px; border-top:1px solid var(--border-light);">
       <div class="reviews-header">
         <div>
-          <h2 style="font-family:var(--font-display); font-size:2.5rem; font-weight:300; margin-bottom:8px;">Customer Reviews</h2>
+          <h2 style="font-family:var(--font-display); font-size:2.5rem; font-weight:300; margin-bottom:8px;">Customer
+            Reviews</h2>
           <div class="reviews-summary">
             <div class="stars" id="avgStars">★★★★★</div>
             <span id="reviewCount">0 Reviews</span>
@@ -89,7 +106,8 @@
       <div id="reviewFormContainer" class="review-form-container" style="display:none;">
         <h3>Write your review</h3>
         <div class="star-rating-input" id="starRatingInput">
-          <span data-val="1">★</span><span data-val="2">★</span><span data-val="3">★</span><span data-val="4">★</span><span data-val="5">★</span>
+          <span data-val="1">★</span><span data-val="2">★</span><span data-val="3">★</span><span
+            data-val="4">★</span><span data-val="5">★</span>
         </div>
         <textarea id="reviewTextInput" placeholder="What did you love about this item?" rows="4"></textarea>
         <div style="display:flex; gap:16px;">
@@ -113,9 +131,10 @@
 
   <div class="toast" id="toast"></div>
 
-  <script src="../JsFolder/data.js"></script>
-  <script src="../JsFolder/auth.js"></script>
-  <script src="../JsFolder/app.js"></script>
-  <script src="../JsFolder/product.js"></script>
+  <script src="JsFolder/data.js"></script>
+  <script src="JsFolder/auth.js"></script>
+  <script src="JsFolder/app.js"></script>
+  <script src="JsFolder/product.js"></script>
 </body>
+
 </html>

@@ -49,7 +49,7 @@ function renderCart() {
       img.src = imgSrc;
       img.alt = product.name;
       img.loading = 'lazy';
-      img.onerror = function() { this.onerror = null; this.src = '../images/placeholder.svg'; };
+      img.onerror = function() { this.onerror = null; this.src = './images/placeholder.svg'; };
       imgDiv.appendChild(img);
 
       // Info container
