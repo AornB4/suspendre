@@ -1,0 +1,161 @@
+/* =========================================
+   SUSPENDRE — Index / Landing Page Styles
+   ========================================= */
+
+/* ===== HERO ===== */
+.hero {
+  min-height: 100vh;
+  display: flex; align-items: center; justify-content: flex-start;
+  padding: 0 10vw;
+  position: relative; overflow: hidden;
+  background: var(--cream);
+}
+
+.hero-bg {
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(ellipse 80% 60% at 70% 50%, rgba(184,151,58,0.08) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 80% at 20% 80%, rgba(26,26,26,0.04) 0%, transparent 50%);
+}
+
+.hero-grain {
+  position: absolute; inset: 0; opacity: 0.03;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  background-size: 200px;
+}
+
+.hero-content {
+  position: relative; z-index: 2;
+  max-width: 680px;
+  padding-top: var(--nav-h);
+  animation: heroFade 1.2s cubic-bezier(0.4,0,0.2,1) both;
+}
+
+@keyframes heroFade {
+  from { opacity: 0; transform: translateY(32px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.hero-eyebrow {
+  font-size: 10px; letter-spacing: 0.3em; text-transform: uppercase;
+  color: var(--gold); margin-bottom: 24px;
+  animation: heroFade 1.2s 0.1s cubic-bezier(0.4,0,0.2,1) both;
+}
+
+.hero-title {
+  font-family: var(--font-display);
+  font-size: clamp(3rem, 7vw, 6rem);
+  font-weight: 300; line-height: 1.1; letter-spacing: -0.01em;
+  color: var(--charcoal); margin-bottom: 28px;
+  animation: heroFade 1.2s 0.2s cubic-bezier(0.4,0,0.2,1) both;
+}
+.hero-title em { font-style: italic; color: var(--gold); }
+
+.hero-sub {
+  font-size: 16px; color: var(--warm-gray); line-height: 1.7;
+  max-width: 440px; margin-bottom: 48px;
+  animation: heroFade 1.2s 0.3s cubic-bezier(0.4,0,0.2,1) both;
+}
+
+.hero .btn-primary {
+  animation: heroFade 1.2s 0.4s cubic-bezier(0.4,0,0.2,1) both;
+}
+
+.hero-scroll {
+  position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
+  font-size: 9px; letter-spacing: 0.3em; text-transform: uppercase;
+  color: var(--warm-gray);
+  display: flex; flex-direction: column; align-items: center; gap: 12px;
+  animation: heroFade 1.2s 0.6s cubic-bezier(0.4,0,0.2,1) both;
+}
+.hero-scroll::after {
+  content: '';
+  display: block; width: 1px; height: 48px;
+  background: linear-gradient(to bottom, var(--warm-gray), transparent);
+  animation: scrollLine 2s ease-in-out infinite;
+}
+@keyframes scrollLine {
+  0%, 100% { opacity: 0.4; transform: scaleY(0.6); }
+  50% { opacity: 1; transform: scaleY(1); }
+}
+
+/* ===== MARQUEE ===== */
+.marquee-strip {
+  background: var(--charcoal); overflow: hidden;
+  padding: 16px 0; white-space: nowrap;
+}
+.marquee-track {
+  display: inline-flex; gap: 48px;
+  animation: marquee 24s linear infinite;
+}
+.marquee-track span {
+  font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase;
+  color: var(--cream); opacity: 0.7;
+}
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+/* ===== FEATURED ===== */
+.featured {
+  padding-bottom: 0;
+}
+.featured .section-header { margin-bottom: 0; }
+
+/* ===== PHILOSOPHY ===== */
+.philosophy {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 80px; align-items: center;
+  padding: 120px 80px;
+  background: var(--cream);
+}
+
+.philosophy-text .section-label { display: block; margin-bottom: 16px; }
+
+.philosophy-text h2 {
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 3.5vw, 3rem);
+  font-weight: 300; line-height: 1.2;
+  margin-bottom: 24px; color: var(--charcoal);
+}
+.philosophy-text h2 em { font-style: italic; color: var(--gold); }
+
+.philosophy-text p {
+  font-size: 15px; color: var(--warm-gray);
+  line-height: 1.8; margin-bottom: 16px;
+}
+
+.philosophy-visual {
+  display: grid; grid-template-rows: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.philosophy-card {
+  padding: 28px 32px;
+  background: var(--ivory); border: 1px solid var(--border-light);
+  transition: all var(--transition);
+}
+.philosophy-card:hover {
+  border-color: var(--gold); transform: translateX(8px);
+}
+.philosophy-icon {
+  font-size: 20px; color: var(--gold); margin-bottom: 12px;
+}
+.philosophy-card h3 {
+  font-family: var(--font-display); font-size: 1.1rem; font-weight: 400;
+  margin-bottom: 6px;
+}
+.philosophy-card p { font-size: 13px; color: var(--warm-gray); }
+
+@media (max-width: 900px) {
+  .philosophy {
+    grid-template-columns: 1fr;
+    padding: 80px 24px;
+    gap: 48px;
+  }
+}
+
+@media (max-width: 768px) {
+  .hero { padding: 0 24px; }
+}

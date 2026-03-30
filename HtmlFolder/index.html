@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SUSPENDRE — Luxury Hangers</title>
+  <link rel="stylesheet" href="../cssFolder/styles.css" />
+  <link rel="stylesheet" href="../cssFolder/index.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Jost:wght@200;300;400;500&display=swap"
+    rel="stylesheet">
+</head>
+
+<body>
+
+  <nav class="navbar" id="navbar">
+    <div class="nav-logo">SUSPENDRE</div>
+    <ul class="nav-links" id="navLinks">
+      <li><a href="index.html" class="active">Home</a></li>
+      <li><a href="shop.html">Shop</a></li>
+      <li id="navCartItem" style="display:none"><a href="cart.html">Cart <span class="cart-count"
+            id="cartCount">0</span></a></li>
+      <li id="navLoginItem"><a href="login.html">Login</a></li>
+      <li id="navSignupItem"><a href="signup.html" class="btn-nav">Sign Up</a></li>
+      <li id="navLogoutItem" style="display:none"><a href="#" id="logoutBtn">Logout</a></li>
+      <li id="navAdminItem" style="display:none"><a href="admin.html">Admin</a></li>
+    </ul>
+    <div class="hamburger" id="hamburger">
+      <span></span><span></span><span></span>
+    </div>
+  </nav>
+
+  <section class="hero">
+    <div class="hero-bg">
+      <div class="hero-grain"></div>
+    </div>
+    <div class="hero-content">
+      <p class="hero-eyebrow">The Art of Order</p>
+      <h1 class="hero-title">Where <em>luxury</em><br />meets structure.</h1>
+      <p class="hero-sub">Handcrafted designer hangers for those who believe presentation is everything.</p>
+      <a href="shop.html" class="btn-primary">Explore Collection</a>
+    </div>
+    <div class="hero-scroll">Scroll</div>
+  </section>
+
+  <div class="marquee-strip">
+    <div class="marquee-track">
+      <span>Handcrafted Excellence</span>
+      <span>·</span>
+      <span>Artisan Walnut</span>
+      <span>·</span>
+      <span>24K Gold Accents</span>
+      <span>·</span>
+      <span>Bespoke Design</span>
+      <span>·</span>
+      <span>Lifetime Warranty</span>
+      <span>·</span>
+      <span>Handcrafted Excellence</span>
+      <span>·</span>
+      <span>Artisan Walnut</span>
+      <span>·</span>
+      <span>24K Gold Accents</span>
+      <span>·</span>
+      <span>Bespoke Design</span>
+      <span>·</span>
+      <span>Lifetime Warranty</span>
+      <span>·</span>
+    </div>
+  </div>
+
+  <section class="featured" id="featured">
+    <div class="section-header">
+      <p class="section-label">Featured Collection</p>
+      <h2 class="section-title">Curated Pieces</h2>
+    </div>
+    <div class="products-grid" id="featuredGrid">
+
+    </div>
+    <div class="section-cta">
+      <a href="shop.html" class="btn-outline">View All Products</a>
+    </div>
+  </section>
+
+  <section class="philosophy">
+    <div class="philosophy-text">
+      <p class="section-label">Our Philosophy</p>
+      <h2>Craftsmanship <em>elevated</em> to ritual.</h2>
+      <p>Each SUSPENDRE piece is conceived by master artisans who understand that a hanger is not merely functional — it
+        is the silent guardian of your most cherished garments.</p>
+      <p>From single-origin walnut to hand-applied gold leaf, every material is chosen with obsessive care.</p>
+    </div>
+    <div class="philosophy-visual">
+      <div class="philosophy-card">
+        <div class="philosophy-icon">✦</div>
+        <h3>Artisan Wood</h3>
+        <p>Single-origin walnut and mahogany, sustainably sourced and hand-finished</p>
+      </div>
+      <div class="philosophy-card">
+        <div class="philosophy-icon">◈</div>
+        <h3>Metal Accents</h3>
+        <p>Solid brass, 18K gold-plated, and brushed chrome hardware</p>
+      </div>
+      <div class="philosophy-card">
+        <div class="philosophy-icon">◎</div>
+        <h3>Velvet Lining</h3>
+        <p>French silk velvet in 12 exclusive tones, preventing garment slippage</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="toast" id="toast"></div>
+
+  <footer class="footer">
+    <div class="footer-logo">SUSPENDRE</div>
+    <p class="footer-tagline">The finest hangers in the world.</p>
+    <div class="footer-links">
+      <a href="index.html">Home</a>
+      <a href="shop.html">Shop</a>
+      <a href="login.html">Login</a>
+      <a href="signup.html">Sign Up</a>
+    </div>
+    <p class="footer-copy">&copy; 2026 SUSPENDRE. All rights reserved.</p>
+  </footer>
+
+  <script src="../JsFolder/data.js"></script>
+  <script src="../JsFolder/auth.js"></script>
+  <script src="../JsFolder/app.js"></script>
+  <script src="../JsFolder/index.js"></script>
+</body>
+
+</html>

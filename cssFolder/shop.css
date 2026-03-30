@@ -1,0 +1,53 @@
+/* =========================================
+   SUSPENDRE — Shop Page Styles
+   ========================================= */
+
+.shop-header {
+  padding: calc(var(--nav-h) + 80px) 80px 60px;
+  background: var(--cream);
+  border-bottom: 1px solid var(--border-light);
+}
+.shop-header .section-label { display: block; margin-bottom: 12px; }
+.shop-header h1 {
+  font-family: var(--font-display);
+  font-size: clamp(2.5rem, 5vw, 4.5rem);
+  font-weight: 300; margin-bottom: 12px;
+}
+.shop-sub { font-size: 15px; color: var(--warm-gray); }
+
+.shop-controls {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 24px 48px;
+  border-bottom: 1px solid var(--border-light);
+  gap: 16px; flex-wrap: wrap;
+}
+.shop-filter { display: flex; gap: 16px; flex-wrap: wrap; }
+.shop-filter select {
+  padding: 10px 40px 10px 16px;
+  border: 1px solid var(--border);
+  background: var(--ivory);
+  font-family: var(--font-body); font-size: 12px;
+  letter-spacing: 0.08em; color: var(--charcoal);
+  appearance: none; cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M6 8L1 3h10z' fill='%238A8478'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 14px center;
+  outline: none; transition: border-color var(--transition);
+}
+.shop-filter select:focus { border-color: var(--charcoal); }
+
+.product-count {
+  font-size: 12px; color: var(--warm-gray); letter-spacing: 0.08em;
+}
+
+.shop-grid {
+  padding: 40px 48px;
+  min-height: 400px;
+}
+
+@media (max-width: 768px) {
+  .shop-header { padding: calc(var(--nav-h) + 48px) 24px 40px; }
+  .shop-controls { padding: 20px 24px; }
+  .shop-grid { padding: 24px; }
+  .shop-filter { width: 100%; }
+  .shop-filter select { flex: 1; }
+}

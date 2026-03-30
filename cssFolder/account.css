@@ -1,0 +1,276 @@
+/* =========================================
+   SUSPENDRE — Account Dashboard Styles
+   ========================================= */
+
+.account-body {
+  background: var(--ivory);
+}
+
+.account-container {
+  padding: calc(var(--nav-h) + 64px) 48px 120px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.account-header {
+  margin-bottom: 64px;
+  text-align: center;
+}
+.account-header h1 {
+  font-family: var(--font-display);
+  font-size: 3rem;
+  font-weight: 300;
+  color: var(--charcoal);
+  margin-bottom: 12px;
+}
+.account-header p {
+  color: var(--warm-gray);
+  font-size: 1.1rem;
+}
+
+/* Avatar Styles */
+.avatar-container {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 24px;
+}
+.avatar-wrapper {
+  position: relative;
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  background: var(--cream);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  cursor: pointer;
+  border: 1px solid var(--border-light);
+  box-shadow: var(--shadow);
+  transition: box-shadow var(--transition);
+}
+.avatar-wrapper:hover {
+  box-shadow: var(--shadow-hover);
+}
+.avatar-initial {
+  font-family: var(--font-display);
+  font-size: 2.5rem;
+  color: var(--gold);
+}
+#avatarPreview {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  position: absolute;
+  top: 0; left: 0;
+}
+.avatar-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(26,26,26,0.6);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  opacity: 0;
+  transition: opacity var(--transition);
+}
+.avatar-wrapper:hover .avatar-overlay {
+  opacity: 1;
+}
+
+.account-grid {
+  display: grid;
+  grid-template-columns: 350px minmax(0, 1fr);
+  gap: 48px;
+  align-items: start;
+}
+
+.account-right-col {
+  min-width: 0;
+}
+
+.account-card {
+  background: #fff;
+  padding: 40px;
+  border-radius: 4px;
+  box-shadow: var(--shadow);
+}
+.account-card h2 {
+  font-family: var(--font-display);
+  font-size: 1.8rem;
+  font-weight: 400;
+  margin-bottom: 32px;
+  border-bottom: 1px solid var(--border-light);
+  padding-bottom: 16px;
+}
+
+.info-block {
+  margin-bottom: 24px;
+}
+.info-block:last-child {
+  margin-bottom: 0;
+}
+.info-block label {
+  display: block;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--warm-gray);
+  margin-bottom: 4px;
+}
+.info-block p {
+  font-size: 1.05rem;
+  color: var(--charcoal);
+  line-height: 1.6;
+}
+
+/* Orders List */
+.empty-orders {
+  text-align: center;
+  color: var(--warm-gray);
+  padding: 40px 0;
+}
+.order-item {
+  border: 1px solid var(--border-light);
+  border-radius: 4px;
+  padding: 24px;
+  margin-bottom: 24px;
+}
+.order-item:last-child { margin-bottom: 0; }
+
+.order-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px dashed var(--border-light);
+}
+.order-id {
+  font-weight: 500;
+  font-family: monospace;
+  font-size: 1.1rem;
+}
+.order-date {
+  color: var(--warm-gray);
+  font-size: 0.9rem;
+}
+
+.order-status {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-weight: 500;
+  margin-left: 16px;
+}
+.status-processing { background: #fdf5e6; color: #d4a373; }
+.status-shipped { background: #f0f9f4; color: #2d6a4f; }
+
+.order-details {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+}
+.order-products {
+  flex: 1;
+}
+.order-product-line {
+  font-size: 0.95rem;
+  color: var(--charcoal-soft);
+  margin-bottom: 8px;
+}
+.order-product-line span { color: var(--warm-gray); font-size: 0.85rem; }
+
+.order-actions {
+  text-align: right;
+  min-width: 150px;
+}
+.order-total {
+  font-size: 1.25rem;
+  font-weight: 500;
+  display: block;
+  margin-bottom: 12px;
+}
+.btn-reorder {
+  padding: 8px 16px;
+  font-size: 0.85rem;
+  border: 1px solid var(--charcoal);
+  color: var(--charcoal);
+  transition: background 0.2s, color 0.2s;
+  background: transparent;
+  cursor: pointer;
+  border-radius: 4px;
+}
+.btn-reorder:hover {
+  background: var(--charcoal);
+  color: #fff;
+}
+
+@media (max-width: 1024px) {
+  .account-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Horizontal Scroll Carousel */
+.horizontal-scroll-container {
+  display: flex !important;
+  gap: 24px;
+  overflow-x: auto;
+  padding-bottom: 16px;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+}
+.horizontal-scroll-container > .product-card {
+  flex: 0 0 calc(50% - 12px); /* Shows exactly 2 cards at a time */
+  scroll-snap-align: start;
+}
+.horizontal-scroll-container::-webkit-scrollbar {
+  height: 6px;
+}
+.horizontal-scroll-container::-webkit-scrollbar-track {
+  background: var(--ivory);
+  border-radius: 4px;
+}
+.horizontal-scroll-container::-webkit-scrollbar-thumb {
+  background: var(--gold);
+  border-radius: 4px;
+}
+
+@media (max-width: 768px) {
+  .horizontal-scroll-container > .product-card {
+    flex: 0 0 85%; /* Shows 1 card and a sliver of the next on mobile */
+  }
+}
+@media (max-width: 768px) {
+  .account-container {
+    padding: calc(var(--nav-h) + 32px) 24px 80px;
+  }
+  .order-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .order-status {
+    margin-left: 0;
+  }
+  .order-details {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+  .order-actions {
+    text-align: left;
+    width: 100%;
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px dashed var(--border-light);
+  }
+}

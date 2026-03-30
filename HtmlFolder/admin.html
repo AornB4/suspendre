@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Panel — SUSPENDRE</title>
+  <link rel="stylesheet" href="../cssFolder/styles.css" />
+  <link rel="stylesheet" href="../cssFolder/admin.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Jost:wght@200;300;400;500&display=swap"
+    rel="stylesheet">
+</head>
+
+<body>
+  <nav class="navbar" id="navbar">
+    <div class="nav-logo"><a href="index.html">SUSPENDRE</a></div>
+    <ul class="nav-links" id="navLinks">
+      <li><a href="index.html">Home</a></li>
+      <li><a href="shop.html">Shop</a></li>
+      <li id="navCartItem" style="display:none"><a href="cart.html">Cart <span class="cart-count"
+            id="cartCount">0</span></a></li>
+      <li id="navLoginItem"><a href="login.html">Login</a></li>
+      <li id="navSignupItem"><a href="signup.html" class="btn-nav">Sign Up</a></li>
+      <li id="navLogoutItem" style="display:none"><a href="#" id="logoutBtn">Logout</a></li>
+      <li id="navAdminItem" style="display:none"><a href="admin.html" class="active">Admin</a></li>
+    </ul>
+    <div class="hamburger" id="hamburger"><span></span><span></span><span></span></div>
+  </nav>
+
+  <div class="admin-layout">
+    <!-- Sidebar -->
+    <aside class="admin-sidebar">
+      <div class="admin-user">
+        <div class="admin-avatar">A</div>
+        <div>
+          <p class="admin-name">Admin Panel</p>
+          <p class="admin-role">SUSPENDRE HQ</p>
+        </div>
+      </div>
+      <nav class="admin-nav">
+        <a href="#" class="admin-nav-item active" data-tab="dashboard">
+          <span class="nav-icon">◈</span> Dashboard
+        </a>
+        <a href="#" class="admin-nav-item" data-tab="products">
+          <span class="nav-icon">◻</span> Products
+        </a>
+        <a href="#" class="admin-nav-item" data-tab="orders">
+          <span class="nav-icon">◎</span> Orders
+        </a>
+        <a href="#" class="admin-nav-item" data-tab="add-product">
+          <span class="nav-icon">✦</span> Add Product
+        </a>
+      </nav>
+    </aside>
+
+    <!-- Main -->
+    <main class="admin-main">
+      <!-- Dashboard Tab -->
+      <div class="admin-tab active" id="tab-dashboard">
+        <div class="admin-page-header">
+          <h1>Dashboard</h1>
+          <p>Overview of your store</p>
+        </div>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <p class="stat-label">Total Products</p>
+            <p class="stat-value" id="statProducts">—</p>
+          </div>
+          <div class="stat-card">
+            <p class="stat-label">Total Orders</p>
+            <p class="stat-value" id="statOrders">—</p>
+          </div>
+          <div class="stat-card">
+            <p class="stat-label">Total Revenue</p>
+            <p class="stat-value" id="statRevenue">—</p>
+          </div>
+          <div class="stat-card">
+            <p class="stat-label">Registered Users</p>
+            <p class="stat-value" id="statUsers">—</p>
+          </div>
+        </div>
+        <div class="recent-orders-section">
+          <h2>Recent Orders</h2>
+          <div id="recentOrdersList"></div>
+        </div>
+      </div>
+
+      <!-- Products Tab -->
+      <div class="admin-tab" id="tab-products">
+        <div class="admin-page-header">
+          <h1>Products</h1>
+          <p>Manage your collection</p>
+        </div>
+        <div class="admin-products-list" id="adminProductsList"></div>
+      </div>
+
+      <!-- Orders Tab -->
+      <div class="admin-tab" id="tab-orders">
+        <div class="admin-page-header">
+          <h1>Orders</h1>
+          <p>All simulated orders</p>
+        </div>
+        <div id="allOrdersList"></div>
+      </div>
+
+      <!-- Add Product Tab -->
+      <div class="admin-tab" id="tab-add-product">
+        <div class="admin-page-header">
+          <h1 id="productFormTitle">Add New Product</h1>
+          <p>Fill in the details below</p>
+        </div>
+        <div class="product-form-card">
+          <div class="form-row">
+            <div class="form-group">
+              <label>Product Name</label>
+              <input type="text" id="prodName" placeholder="e.g. Walnut Prestige Hanger" />
+            </div>
+            <div class="form-group">
+              <label>Category</label>
+              <select id="prodCategory">
+                <option value="wood">Wood</option>
+                <option value="metal">Metal</option>
+                <option value="velvet">Velvet</option>
+                <option value="gold">Gold</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Price ($)</label>
+              <input type="number" id="prodPrice" placeholder="e.g. 299" min="1" />
+            </div>
+            <div class="form-group">
+              <label>Stock Quantity</label>
+              <input type="number" id="prodStock" placeholder="e.g. 20" min="0" />
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Short Description</label>
+            <textarea id="prodDesc" rows="3" placeholder="Brief, elegant description of the product"></textarea>
+          </div>
+          <div class="form-group">
+            <label>Image URL <span style="opacity:.5">(or leave blank for auto-generated)</span></label>
+            <input type="text" id="prodImage" placeholder="https://..." />
+          </div>
+          <div class="form-group">
+            <label>Featured on Home Page</label>
+            <div class="toggle-row">
+              <input type="checkbox" id="prodFeatured" class="toggle-checkbox" />
+              <label for="prodFeatured" class="toggle-label">Show on landing page</label>
+            </div>
+          </div>
+          <div class="form-actions">
+            <button class="btn-primary" id="saveProductBtn">Save Product</button>
+            <button class="btn-outline" id="cancelEditBtn" style="display:none">Cancel Edit</button>
+          </div>
+          <input type="hidden" id="editProductId" />
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Delete Confirm Modal -->
+  <div class="modal-overlay" id="deleteModal" style="display:none">
+    <div class="modal confirm-modal">
+      <h2>Delete Product</h2>
+      <p>Are you sure you want to remove this product? This action cannot be undone.</p>
+      <div class="modal-actions">
+        <button class="btn-danger" id="confirmDeleteBtn">Delete</button>
+        <button class="btn-outline" id="cancelDeleteBtn">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="../JsFolder/data.js"></script>
+  <script src="../JsFolder/auth.js"></script>
+  <script src="../JsFolder/app.js"></script>
+  <script src="../JsFolder/admin.js"></script>
+</body>
+
+</html>

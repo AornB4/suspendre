@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cart — SUSPENDRE</title>
+  <link rel="stylesheet" href="../cssFolder/styles.css" />
+  <link rel="stylesheet" href="../cssFolder/cart.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Jost:wght@200;300;400;500&display=swap"
+    rel="stylesheet">
+</head>
+
+<body>
+  <nav class="navbar" id="navbar">
+    <div class="nav-logo"><a href="index.html">SUSPENDRE</a></div>
+    <ul class="nav-links" id="navLinks">
+      <li><a href="index.html">Home</a></li>
+      <li><a href="shop.html">Shop</a></li>
+      <li id="navCartItem" style="display:none"><a href="cart.html" class="active">Cart <span class="cart-count"
+            id="cartCount">0</span></a></li>
+      <li id="navLoginItem"><a href="login.html">Login</a></li>
+      <li id="navSignupItem"><a href="signup.html" class="btn-nav">Sign Up</a></li>
+      <li id="navLogoutItem" style="display:none"><a href="#" id="logoutBtn">Logout</a></li>
+      <li id="navAdminItem" style="display:none"><a href="admin.html">Admin</a></li>
+    </ul>
+    <div class="hamburger" id="hamburger"><span></span><span></span><span></span></div>
+  </nav>
+
+  <div class="page-header">
+    <p class="section-label">Your Selection</p>
+    <h1>Shopping Cart</h1>
+  </div>
+
+  <div class="cart-layout" id="cartLayout">
+    <div class="cart-items" id="cartItems">
+      <!-- Populated by JS -->
+    </div>
+    <div class="cart-summary" id="cartSummary">
+      <h2>Order Summary</h2>
+      <div class="summary-lines" id="summaryLines"></div>
+      <div class="summary-total">
+        <span>Total</span>
+        <span id="cartTotal">$0.00</span>
+      </div>
+      <button class="btn-primary full-width" id="checkoutBtn">Proceed to Checkout</button>
+      <a href="shop.html" class="btn-outline full-width"
+        style="margin-top:12px;display:block;text-align:center;">Continue Shopping</a>
+    </div>
+  </div>
+
+  <div class="cart-empty" id="cartEmpty" style="display:none">
+    <div class="empty-icon">∅</div>
+    <h2>Your cart is empty.</h2>
+    <p>Discover our curated collection of luxury hangers.</p>
+    <a href="shop.html" class="btn-primary">Shop Now</a>
+  </div>
+
+  <!-- Receipt Modal -->
+  <div class="modal-overlay" id="receiptModal" style="display:none">
+    <div class="modal receipt-modal">
+      <div class="receipt-header">
+        <div class="receipt-brand">SUSPENDRE</div>
+        <p>Order Confirmation</p>
+        <div class="receipt-number" id="receiptNumber"></div>
+      </div>
+      <div class="receipt-body" id="receiptBody"></div>
+      <div class="receipt-footer">
+        <div class="receipt-total-line">
+          <span>Order Total</span>
+          <span id="receiptTotal"></span>
+        </div>
+        <p class="receipt-thanks" style="margin-bottom: 24px;">Complete your purchase securely via PayPal Sandbox.</p>
+        <div id="paypal-button-container"></div>
+        <div class="demo-payment-divider" style="text-align:center;font-size:12px;color:var(--warm-gray);margin:16px 0;">— OR —</div>
+        <button class="btn-primary full-width" id="receiptClose">💳 Demo Payment (Skip PayPal)</button>
+        <button class="btn-outline full-width" id="receiptCancel" style="margin-top:12px">Cancel Checkout</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <footer class="footer">
+    <div class="footer-logo">SUSPENDRE</div>
+    <p class="footer-tagline">The finest hangers in the world.</p>
+    <p class="footer-copy">&copy; 2026 SUSPENDRE. All rights reserved.</p>
+  </footer>
+  <script src="https://www.paypal.com/sdk/js?client-id=test&currency=USD"></script>
+  <script src="../JsFolder/data.js"></script>
+  <script src="../JsFolder/auth.js"></script>
+  <script src="../JsFolder/app.js"></script>
+  <script src="../JsFolder/cart.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Shop — SUSPENDRE</title>
+  <link rel="stylesheet" href="../cssFolder/styles.css" />
+  <link rel="stylesheet" href="../cssFolder/shop.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Jost:wght@200;300;400;500&display=swap"
+    rel="stylesheet">
+</head>
+
+<body>
+  <nav class="navbar" id="navbar">
+    <div class="nav-logo"><a href="index.html">SUSPENDRE</a></div>
+    <ul class="nav-links" id="navLinks">
+      <li><a href="index.html">Home</a></li>
+      <li><a href="shop.html" class="active">Shop</a></li>
+      <li id="navCartItem" style="display:none"><a href="cart.html">Cart <span class="cart-count"
+            id="cartCount">0</span></a></li>
+      <li id="navLoginItem"><a href="login.html">Login</a></li>
+      <li id="navSignupItem"><a href="signup.html" class="btn-nav">Sign Up</a></li>
+      <li id="navLogoutItem" style="display:none"><a href="#" id="logoutBtn">Logout</a></li>
+      <li id="navAdminItem" style="display:none"><a href="admin.html">Admin</a></li>
+    </ul>
+    <div class="hamburger" id="hamburger">
+      <span></span><span></span><span></span>
+    </div>
+  </nav>
+
+  <div class="shop-header">
+    <p class="section-label">Our Collection</p>
+    <h1>The Full Collection</h1>
+    <p class="shop-sub">Every piece, crafted for the discerning.</p>
+  </div>
+
+  <div class="shop-controls">
+    <div class="shop-filter" style="display:flex; flex-wrap:wrap; gap:16px; align-items:center;">
+      <div style="position:relative;">
+        <input type="text" id="searchInput" placeholder="Search hangers..." style="padding:10px 16px 10px 36px; border:1px solid var(--border-light); border-radius:4px; font-family:var(--font-body); font-size:0.95rem; min-width:250px; outline:none; transition:border-color 0.2s;" onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='var(--border-light)'">
+        <svg viewBox="0 0 24 24" width="16" height="16" stroke="var(--warm-gray)" stroke-width="2" fill="none" style="position:absolute; left:12px; top:50%; transform:translateY(-50%);"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+      </div>
+      <select id="filterCategory">
+        <option value="all">All Categories</option>
+        <option value="wood">Wood</option>
+        <option value="metal">Metal</option>
+        <option value="velvet">Velvet</option>
+        <option value="gold">Gold</option>
+      </select>
+      <select id="sortBy">
+        <option value="default">Sort: Default</option>
+        <option value="price-asc">Price: Low to High</option>
+        <option value="price-desc">Price: High to Low</option>
+        <option value="name">Name A–Z</option>
+      </select>
+    </div>
+    <p class="product-count" id="productCount">— products</p>
+  </div>
+
+  <div class="products-grid shop-grid" id="shopGrid">
+    <!-- Populated by JS -->
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <footer class="footer">
+    <div class="footer-logo">SUSPENDRE</div>
+    <p class="footer-tagline">The finest hangers in the world.</p>
+    <div class="footer-links">
+      <a href="index.html">Home</a>
+      <a href="shop.html">Shop</a>
+      <a href="login.html">Login</a>
+    </div>
+    <p class="footer-copy">&copy; 2026 SUSPENDRE. All rights reserved.</p>
+  </footer>
+  <script src="../JsFolder/data.js"></script>
+  <script src="../JsFolder/auth.js"></script>
+  <script src="../JsFolder/app.js"></script>
+  <script src="../JsFolder/shop.js"></script>
+</body>
+
+</html>
