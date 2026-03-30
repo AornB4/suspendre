@@ -5,7 +5,11 @@
 .account-body {
   background: var(--ivory);
 }
-
+/* .account-body a {
+  color: var(--charcoal);
+  text-decoration: none;
+  transition: color var(--transition);
+} */
 .account-container {
   padding: calc(var(--nav-h) + 64px) 48px 120px;
   max-width: 1200px;
