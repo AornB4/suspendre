@@ -7,6 +7,7 @@
   <title>Cart — SUSPENDRE</title>
   <link rel="icon" type="image/png" href="images/favicon.png?v=1" />
   <link rel="stylesheet" href="cssFolder/styles.css" />
+  <link rel="stylesheet" href="cssFolder/chatbot.css" />
   <link rel="stylesheet" href="cssFolder/cart.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link
@@ -62,6 +63,10 @@
   <!-- Receipt Modal -->
   <div class="modal-overlay" id="receiptModal" style="display:none">
     <div class="modal receipt-modal">
+      <button class="receipt-scroll-btn" id="receiptScrollBtn" type="button" aria-label="Scroll through checkout">
+        <span class="receipt-scroll-icon" aria-hidden="true">↓</span>
+        <span class="receipt-scroll-label">Scroll</span>
+      </button>
       <div class="receipt-header">
         <div class="receipt-brand">SUSPENDRE</div>
         <p>Order Confirmation</p>
@@ -98,6 +103,7 @@
   <script src="JsFolder/data.js"></script>
   <script src="JsFolder/auth.js"></script>
   <script src="JsFolder/app.js"></script>
+  <script src="JsFolder/chatbot.js"></script>
   <script src="JsFolder/cart.js"></script>
 </body>
 

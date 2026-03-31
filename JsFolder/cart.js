@@ -15,6 +15,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     void finalizeOrder();
   });
   document.getElementById('receiptCancel')?.addEventListener('click', cancelCheckout);
+  document.getElementById('receiptScrollBtn')?.addEventListener('click', toggleReceiptScroll);
+  document.querySelector('.receipt-modal')?.addEventListener('scroll', updateReceiptScrollButton);
 });
 
 function renderCart() {
@@ -209,7 +211,39 @@ function cancelCheckout() {
   // Cancel — do NOT finalize, keep cart intact
   pendingOrderItems = null;
   document.getElementById('receiptModal').style.display = 'none';
+  updateReceiptScrollButton();
   showToast('Checkout cancelled. Your cart is still intact.', 'default');
+}
+
+function updateReceiptScrollButton() {
+  const modal = document.querySelector('.receipt-modal');
+  const button = document.getElementById('receiptScrollBtn');
+  const icon = button?.querySelector('.receipt-scroll-icon');
+  const label = button?.querySelector('.receipt-scroll-label');
+
+  if (!modal || !button || !icon || !label) return;
+
+  const canScroll = modal.scrollHeight > modal.clientHeight + 24;
+  if (!canScroll) {
+    button.classList.remove('visible');
+    return;
+  }
+
+  const nearBottom = modal.scrollTop + modal.clientHeight >= modal.scrollHeight - 32;
+  button.classList.add('visible');
+  icon.textContent = nearBottom ? '↑' : '↓';
+  label.textContent = nearBottom ? 'Top' : 'Scroll';
+}
+
+function toggleReceiptScroll() {
+  const modal = document.querySelector('.receipt-modal');
+  if (!modal) return;
+
+  const nearBottom = modal.scrollTop + modal.clientHeight >= modal.scrollHeight - 32;
+  modal.scrollTo({
+    top: nearBottom ? 0 : modal.scrollHeight,
+    behavior: 'smooth'
+  });
 }
 
 function showReceiptPreview(cartItems) {
@@ -285,4 +319,9 @@ function showReceiptPreview(cartItems) {
   }
 
   modal.style.display = 'flex';
+  const modalCard = modal.querySelector('.receipt-modal');
+  if (modalCard) {
+    modalCard.scrollTop = 0;
+  }
+  updateReceiptScrollButton();
 }
