@@ -3,6 +3,7 @@
 // =========================================
 
 document.addEventListener('DOMContentLoaded', async () => {
+  await Auth.ready();
   await ProductData.ready();
 
   // Cart is accessible to everyone (guests and logged-in users)
@@ -10,7 +11,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   renderCart();
 
   document.getElementById('checkoutBtn')?.addEventListener('click', handleCheckout);
-  document.getElementById('receiptClose')?.addEventListener('click', finalizeOrder);
+  document.getElementById('receiptClose')?.addEventListener('click', () => {
+    void finalizeOrder();
+  });
   document.getElementById('receiptCancel')?.addEventListener('click', cancelCheckout);
 });
 
@@ -165,15 +168,40 @@ async function handleCheckout() {
   showReceiptPreview(items);
 }
 
-function finalizeOrder() {
+async function finalizeOrder() {
   if (!pendingOrderItems || pendingOrderItems.length === 0) return;
 
-  // NOW create the order, decrement stock, and clear cart
-  Orders.createOrder(pendingOrderItems);
+  const closeBtn = document.getElementById('receiptClose');
+  const cancelBtn = document.getElementById('receiptCancel');
+
+  if (closeBtn) {
+    closeBtn.disabled = true;
+    closeBtn.textContent = 'Finalizing...';
+  }
+  if (cancelBtn) cancelBtn.disabled = true;
+
+  const result = await Orders.createOrder(pendingOrderItems, {
+    paymentMethod: window.paypal ? 'paypal' : 'manual',
+    paymentStatus: 'paid',
+    status: 'processing'
+  });
+
+  if (closeBtn) {
+    closeBtn.disabled = false;
+    closeBtn.textContent = 'Complete Order';
+  }
+  if (cancelBtn) cancelBtn.disabled = false;
+
+  if (!result.success) {
+    showToast(result.message || 'Could not complete your order.', 'error');
+    return;
+  }
+
   Cart.clear();
   pendingOrderItems = null;
 
   document.getElementById('receiptModal').style.display = 'none';
+  showToast('Order placed successfully!', 'success');
   window.location.href = 'shop.html';
 }
 

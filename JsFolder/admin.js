@@ -5,6 +5,7 @@
 document.addEventListener('DOMContentLoaded', async () => {
   await Auth.ready();
   await ProductData.ready();
+  await Orders.ready();
 
   // Require admin
   if (!Auth.requireAdmin()) return;
@@ -67,7 +68,7 @@ async function renderDashboard() {
 
     const userSpan = document.createElement('span');
     userSpan.className = 'order-user';
-    userSpan.textContent = `${order.userName} <${order.userEmail}>`;
+    userSpan.textContent = order.userEmail ? `${order.userName} <${order.userEmail}>` : order.userName;
 
     const amountSpan = document.createElement('span');
     amountSpan.className = 'order-amount';
@@ -173,11 +174,13 @@ function renderAllOrders() {
 
     const detailDiv = document.createElement('div');
     detailDiv.style.cssText = 'font-size:13px;color:var(--warm-gray);margin-bottom:4px;';
-    detailDiv.textContent = `${order.userName} · ${order.userEmail} · ${formatDate(order.createdAt)}`;
+    detailDiv.textContent = order.userEmail
+      ? `${order.userName} · ${order.userEmail} · ${formatDate(order.createdAt)}`
+      : `${order.userName} · ${formatDate(order.createdAt)}`;
 
     const itemsDiv = document.createElement('div');
     itemsDiv.style.cssText = 'font-size:12px;color:var(--warm-gray);font-style:italic';
-    itemsDiv.textContent = itemsList;
+    itemsDiv.textContent = `${itemsList} · ${order.status || 'processing'}`;
 
     card.append(headerDiv, detailDiv, itemsDiv);
     el.appendChild(card);

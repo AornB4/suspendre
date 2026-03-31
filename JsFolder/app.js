@@ -187,24 +187,206 @@ const CartDrawer = {
 // ===== ORDERS =====
 const Orders = {
   KEY: 'suspendre_orders',
+  cache: [],
+  initPromise: null,
+  initialized: false,
+  source: 'fallback',
+  customerSnapshotColumnsAvailable: null,
 
-  getAll() {
-    return JSON.parse(localStorage.getItem(this.KEY)) || [];
+  getClient() {
+    const db = window.SUSPENDRE_SUPABASE;
+    if (!db || !db.isConfigured()) return null;
+    return db.getClient();
   },
 
-  createOrder(cartItems) {
-    const orders = this.getAll();
-    const user = Auth.getCurrentUser();
-    const items = cartItems.map(item => {
+  hasMissingColumnError(error, columnName) {
+    const message = String(error && error.message ? error.message : '').toLowerCase();
+    return message.includes(columnName.toLowerCase()) && message.includes('column');
+  },
+
+  hasMissingFunctionError(error, functionName) {
+    const message = String(error && error.message ? error.message : '').toLowerCase();
+    return message.includes(functionName.toLowerCase()) && (message.includes('function') || message.includes('rpc'));
+  },
+
+  getSelectClause(includeSnapshots = true) {
+    const fields = [
+      'id',
+      'user_id',
+      'status',
+      'payment_method',
+      'payment_status',
+      'total_amount',
+      'created_at'
+    ];
+
+    if (includeSnapshots) {
+      fields.push('customer_name_snapshot', 'customer_email_snapshot');
+    }
+
+    fields.push(`
+      order_items (
+        id,
+        product_id,
+        product_name_snapshot,
+        unit_price,
+        quantity,
+        subtotal,
+        created_at
+      )
+    `);
+
+    return fields.join(', ');
+  },
+
+  normalizeItem(item) {
+    const product = ProductData.getById(item.product_id);
+    return {
+      productId: product ? product.id : item.product_id,
+      name: item.product_name_snapshot || (product ? product.name : 'Unknown'),
+      price: Number(item.unit_price) || 0,
+      qty: Number(item.quantity) || 0,
+      subtotal: Number(item.subtotal) || 0
+    };
+  },
+
+  normalizeOrder(order) {
+    const currentUser = Auth.getCurrentUser();
+    const isOwnOrder = !!currentUser && currentUser.id === order.user_id;
+    return {
+      id: order.id,
+      userId: order.user_id,
+      userName: order.customer_name_snapshot || (isOwnOrder ? currentUser.name : 'Suspendre Customer'),
+      userEmail: order.customer_email_snapshot || (isOwnOrder ? currentUser.email : ''),
+      items: Array.isArray(order.order_items) ? order.order_items.map(item => this.normalizeItem(item)) : [],
+      total: Number(order.total_amount) || 0,
+      status: order.status || 'pending',
+      paymentMethod: order.payment_method || '',
+      paymentStatus: order.payment_status || 'pending',
+      createdAt: order.created_at || new Date().toISOString()
+    };
+  },
+
+  loadFallbackOrders() {
+    const stored = localStorage.getItem(this.KEY);
+    if (!stored) return [];
+
+    try {
+      return JSON.parse(stored);
+    } catch (error) {
+      console.warn('Failed to parse cached orders. Resetting fallback orders.', error);
+      return [];
+    }
+  },
+
+  persistCache() {
+    localStorage.setItem(this.KEY, JSON.stringify(this.cache));
+  },
+
+  async loadFromSupabase() {
+    const client = this.getClient();
+    if (!client) return null;
+
+    if (this.customerSnapshotColumnsAvailable !== false) {
+      const { data, error } = await client
+        .from('orders')
+        .select(this.getSelectClause(true))
+        .order('created_at', { ascending: false });
+
+      if (!error) {
+        this.customerSnapshotColumnsAvailable = true;
+        return data || [];
+      }
+
+      if (!this.hasMissingColumnError(error, 'customer_name_snapshot') && !this.hasMissingColumnError(error, 'customer_email_snapshot')) {
+        console.error('Failed to load orders from Supabase.', error);
+        return null;
+      }
+
+      this.customerSnapshotColumnsAvailable = false;
+    }
+
+    const { data, error } = await client
+      .from('orders')
+      .select(this.getSelectClause(false))
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Failed to load orders from Supabase.', error);
+      return null;
+    }
+
+    return data || [];
+  },
+
+  async init() {
+    if (this.initPromise) return this.initPromise;
+
+    this.initPromise = (async () => {
+      const remoteOrders = await this.loadFromSupabase();
+
+      if (Array.isArray(remoteOrders)) {
+        this.cache = remoteOrders.map(order => this.normalizeOrder(order));
+        this.source = 'supabase';
+      } else {
+        this.cache = this.loadFallbackOrders();
+        this.source = 'fallback';
+      }
+
+      this.persistCache();
+      this.initialized = true;
+      return this.getAll();
+    })();
+
+    return this.initPromise;
+  },
+
+  ready() {
+    return this.init();
+  },
+
+  async refresh() {
+    this.initPromise = null;
+    this.initialized = false;
+    return this.init();
+  },
+
+  getAll() {
+    if (!this.initialized && this.cache.length === 0) {
+      this.cache = this.loadFallbackOrders();
+    }
+    return this.cache.map(order => ({
+      ...order,
+      items: Array.isArray(order.items) ? order.items.map(item => ({ ...item })) : []
+    }));
+  },
+
+  getById(orderId) {
+    const match = this.cache.find(order => order.id === orderId);
+    return match ? {
+      ...match,
+      items: Array.isArray(match.items) ? match.items.map(item => ({ ...item })) : []
+    } : null;
+  },
+
+  buildOrderItems(cartItems) {
+    return cartItems.map(item => {
       const product = ProductData.getById(item.productId);
       return {
         productId: item.productId,
+        productDbId: product ? product.dbId : item.productId,
         name: product ? product.name : 'Unknown',
         price: product ? product.price : 0,
         qty: item.qty,
         subtotal: product ? product.price * item.qty : 0
       };
     });
+  },
+
+  createFallbackOrder(cartItems) {
+    const orders = this.getAll();
+    const user = Auth.getCurrentUser();
+    const items = this.buildOrderItems(cartItems);
 
     const total = items.reduce((s, i) => s + i.subtotal, 0);
     const order = {
@@ -214,15 +396,141 @@ const Orders = {
       userEmail: user ? user.email : '',
       items,
       total,
+      status: 'processing',
+      paymentMethod: 'paypal',
+      paymentStatus: 'paid',
       createdAt: new Date().toISOString()
     };
 
-    // Decrement stock
     items.forEach(item => ProductData.decrementStock(item.productId, item.qty));
 
     orders.unshift(order);
-    localStorage.setItem(this.KEY, JSON.stringify(orders));
+    this.cache = orders;
+    this.persistCache();
     return order;
+  },
+
+  async createOrder(cartItems, options = {}) {
+    await Auth.ready();
+    await ProductData.ready();
+
+    const user = Auth.getCurrentUser();
+    if (!user) {
+      return { success: false, message: 'Please log in to complete your purchase.' };
+    }
+
+    const items = this.buildOrderItems(cartItems).filter(item => item.qty > 0);
+    if (items.length === 0) {
+      return { success: false, message: 'Your cart is empty.' };
+    }
+
+    const total = items.reduce((sum, item) => sum + item.subtotal, 0);
+    const client = this.getClient();
+    if (!client) {
+      return { success: true, order: this.createFallbackOrder(cartItems) };
+    }
+
+    const rpcPayload = {
+      items_input: items.map(item => ({
+        product_id: item.productDbId,
+        quantity: item.qty
+      })),
+      customer_name_input: user.name || 'Suspendre Customer',
+      customer_email_input: user.email || '',
+      payment_method_input: options.paymentMethod || 'paypal',
+      payment_status_input: options.paymentStatus || 'paid',
+      status_input: options.status || 'processing'
+    };
+
+    const { data: rpcOrderId, error: rpcError } = await client.rpc('place_order', rpcPayload);
+
+    if (!rpcError && rpcOrderId) {
+      await Promise.all([this.refresh(), ProductData.refresh()]);
+      return { success: true, order: this.getById(rpcOrderId) };
+    }
+
+    if (this.hasMissingFunctionError(rpcError, 'place_order')) {
+      return {
+        success: false,
+        message: 'Checkout hardening is not installed yet. Run supabase/place-order-rpc.sql in Supabase SQL Editor first.',
+        error: rpcError
+      };
+    }
+
+    if (rpcError) {
+      return {
+        success: false,
+        message: rpcError.message || 'Could not complete your order.',
+        error: rpcError
+      };
+    }
+
+    const basePayload = {
+      user_id: user.id,
+      status: options.status || 'processing',
+      payment_method: options.paymentMethod || 'paypal',
+      payment_status: options.paymentStatus || 'paid',
+      total_amount: total
+    };
+
+    let payload = { ...basePayload };
+    if (this.customerSnapshotColumnsAvailable !== false) {
+      payload.customer_name_snapshot = user.name || 'Suspendre Customer';
+      payload.customer_email_snapshot = user.email || '';
+    }
+
+    let query = client
+      .from('orders')
+      .insert(payload);
+
+    if (this.customerSnapshotColumnsAvailable !== false) {
+      query = query.select(this.getSelectClause(true));
+    } else {
+      query = query.select(this.getSelectClause(false));
+    }
+
+    let { data: orderRow, error } = await query.single();
+
+    if (error && this.customerSnapshotColumnsAvailable !== false && (this.hasMissingColumnError(error, 'customer_name_snapshot') || this.hasMissingColumnError(error, 'customer_email_snapshot'))) {
+      this.customerSnapshotColumnsAvailable = false;
+
+      const fallbackInsert = await client
+        .from('orders')
+        .insert(basePayload)
+        .select(this.getSelectClause(false))
+        .single();
+
+      orderRow = fallbackInsert.data;
+      error = fallbackInsert.error;
+    }
+
+    if (error || !orderRow) {
+      return { success: false, message: error ? error.message : 'Could not create order.', error };
+    }
+
+    const orderItemsPayload = items.map(item => ({
+      order_id: orderRow.id,
+      product_id: item.productDbId,
+      product_name_snapshot: item.name,
+      unit_price: item.price,
+      quantity: item.qty,
+      subtotal: item.subtotal
+    }));
+
+    const { error: itemsError } = await client
+      .from('order_items')
+      .insert(orderItemsPayload);
+
+    if (itemsError) {
+      await client
+        .from('orders')
+        .delete()
+        .eq('id', orderRow.id);
+      return { success: false, message: itemsError.message, error: itemsError };
+    }
+
+    await this.refresh();
+    return { success: true, order: this.getById(orderRow.id) };
   }
 };
 

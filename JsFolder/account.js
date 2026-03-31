@@ -5,6 +5,7 @@
 document.addEventListener('DOMContentLoaded', async () => {
   await Auth.ready();
   await ProductData.ready();
+  await Orders.ready();
 
   if (!Auth.isLoggedIn()) {
     window.location.href = 'login.html';
@@ -143,7 +144,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     reader.readAsDataURL(file);
   });
 
-  renderOrderHistory(user.id);
+  await renderOrderHistory(user.id);
   await renderWishlist();
 });
 
@@ -175,10 +176,9 @@ async function renderWishlist() {
   });
 }
 
-function renderOrderHistory(userId) {
+async function renderOrderHistory(userId) {
   const container = document.getElementById('orderHistoryContainer');
   
-  // Get orders sorted by newest first
   const allOrders = Orders.getAll();
   const userOrders = allOrders.filter(o => o.userId === userId)
                               .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
@@ -195,13 +195,16 @@ function renderOrderHistory(userId) {
 
   container.innerHTML = '';
 
-  userOrders.forEach((order, index) => {
-    // Simulate status: newest order is 'Processing', older ones are 'Shipped'
-    // A real app would get this from the backend
-    const ageHrs = (new Date() - new Date(order.createdAt)) / (1000 * 60 * 60);
-    const isRecent = index === 0 && ageHrs < 24;
-    const statusClass = isRecent ? 'status-processing' : 'status-shipped';
-    const statusText = isRecent ? 'Processing' : 'Shipped';
+  userOrders.forEach((order) => {
+    const normalizedStatus = String(order.status || '').toLowerCase();
+    const statusClass = normalizedStatus === 'shipped'
+      ? 'status-shipped'
+      : normalizedStatus === 'processing' || normalizedStatus === 'paid' || normalizedStatus === 'pending'
+        ? 'status-processing'
+        : 'status-processing';
+    const statusText = order.status
+      ? order.status.charAt(0).toUpperCase() + order.status.slice(1)
+      : 'Processing';
 
     const orderEl = document.createElement('div');
     orderEl.className = 'order-item';
@@ -238,7 +241,7 @@ function renderOrderHistory(userId) {
 
 // Global function to attach to inline onclick
 window.reorder = function(orderId) {
-  const order = Orders.getAll().find(o => o.id === orderId);
+  const order = Orders.getById(orderId);
   if (!order) return;
 
   let addedCount = 0;
