@@ -80,6 +80,23 @@
             </div>
           </div>
         </div>
+        <div class="info-block password-block">
+          <label>Account Password</label>
+          <p class="password-copy">Add a password to this account so you can also sign in with email and password later.</p>
+          <div class="password-form">
+            <input type="password" id="newPasswordInput" placeholder="New password" autocomplete="new-password" />
+            <input type="password" id="confirmPasswordInput" placeholder="Confirm new password" autocomplete="new-password" />
+            <div class="password-requirements" id="accountPasswordRequirements">
+              <div class="password-req" id="account-req-length">Minimum 8 characters</div>
+              <div class="password-req" id="account-req-upper">At least 1 uppercase letter</div>
+              <div class="password-req" id="account-req-lower">At least 1 lowercase letter</div>
+              <div class="password-req" id="account-req-number">At least 1 number</div>
+              <div class="password-req" id="account-req-special">At least 1 special character</div>
+            </div>
+            <p class="password-hint" id="passwordMatchHint" style="display:none;"></p>
+            <button id="savePasswordBtn" class="btn-primary" style="padding:8px 16px; font-size:14px; align-self:flex-start;">Set Password</button>
+          </div>
+        </div>
       </section>
 
       <!-- Right Column: Orders & Wishlist -->

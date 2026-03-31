@@ -144,6 +144,93 @@ document.addEventListener('DOMContentLoaded', async () => {
     reader.readAsDataURL(file);
   });
 
+  const newPasswordInput = document.getElementById('newPasswordInput');
+  const confirmPasswordInput = document.getElementById('confirmPasswordInput');
+  const savePasswordBtn = document.getElementById('savePasswordBtn');
+  const passwordMatchHint = document.getElementById('passwordMatchHint');
+  const passwordRequirementEls = {
+    length: document.getElementById('account-req-length'),
+    upper: document.getElementById('account-req-upper'),
+    lower: document.getElementById('account-req-lower'),
+    number: document.getElementById('account-req-number'),
+    special: document.getElementById('account-req-special')
+  };
+
+  function renderPasswordRequirements() {
+    const value = newPasswordInput ? newPasswordInput.value : '';
+    const checks = {
+      length: value.length >= 8,
+      upper: /[A-Z]/.test(value),
+      lower: /[a-z]/.test(value),
+      number: /[0-9]/.test(value),
+      special: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?`~]/.test(value)
+    };
+
+    Object.keys(checks).forEach((key) => {
+      const el = passwordRequirementEls[key];
+      if (!el) return;
+      el.classList.toggle('valid', checks[key]);
+    });
+  }
+
+  function validatePasswordMatch() {
+    if (!newPasswordInput || !confirmPasswordInput || !passwordMatchHint) return true;
+    if (!confirmPasswordInput.value) {
+      passwordMatchHint.style.display = 'none';
+      return true;
+    }
+
+    const matches = newPasswordInput.value === confirmPasswordInput.value;
+    passwordMatchHint.style.display = 'block';
+    passwordMatchHint.textContent = matches ? 'Passwords match' : 'Passwords do not match';
+    passwordMatchHint.className = `password-hint ${matches ? 'success' : 'error'}`;
+    return matches;
+  }
+
+  newPasswordInput?.addEventListener('input', () => {
+    renderPasswordRequirements();
+    validatePasswordMatch();
+  });
+
+  confirmPasswordInput?.addEventListener('input', validatePasswordMatch);
+
+  savePasswordBtn?.addEventListener('click', async () => {
+    const newPassword = newPasswordInput ? newPasswordInput.value : '';
+    const confirmPassword = confirmPasswordInput ? confirmPasswordInput.value : '';
+
+    if (!newPassword) {
+      showToast('Please enter a new password.', 'error');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      validatePasswordMatch();
+      showToast('Passwords do not match.', 'error');
+      return;
+    }
+
+    savePasswordBtn.disabled = true;
+    savePasswordBtn.textContent = 'Saving...';
+
+    const result = await Auth.updatePassword(newPassword);
+
+    savePasswordBtn.disabled = false;
+    savePasswordBtn.textContent = 'Set Password';
+
+    if (!result.success) {
+      showToast(result.message || 'Could not update password.', 'error');
+      return;
+    }
+
+    if (newPasswordInput) newPasswordInput.value = '';
+    if (confirmPasswordInput) confirmPasswordInput.value = '';
+    renderPasswordRequirements();
+    validatePasswordMatch();
+    showToast('Password updated successfully.', 'success');
+  });
+
+  renderPasswordRequirements();
+
   await renderOrderHistory(user.id);
   await renderWishlist();
 });

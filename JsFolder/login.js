@@ -13,6 +13,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const emailInput = document.getElementById('loginEmail');
   const passwordInput = document.getElementById('loginPassword');
   const loginBtn = document.getElementById('loginBtn');
+  const googleBtn = document.getElementById('googleLoginBtn');
   const togglePw = document.getElementById('togglePw');
   const alertBox = document.getElementById('authAlert');
 
@@ -65,6 +66,24 @@ document.addEventListener('DOMContentLoaded', async () => {
           loginBtn.disabled = false;
         }
       }, 400);
+    });
+  }
+
+  if (googleBtn) {
+    googleBtn.addEventListener('click', async () => {
+      hideAlert();
+      googleBtn.disabled = true;
+      googleBtn.querySelector('span:last-child').textContent = 'Redirecting...';
+
+      const result = await Auth.loginWithGoogle({
+        redirectTo: `${window.location.origin}${window.location.pathname}`
+      });
+
+      if (!result.success) {
+        showAlert(result.message, 'error');
+        googleBtn.disabled = false;
+        googleBtn.querySelector('span:last-child').textContent = 'Continue with Google';
+      }
     });
   }
 

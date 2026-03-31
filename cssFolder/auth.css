@@ -41,6 +41,44 @@
 
 .auth-form { margin-bottom: 24px; }
 
+.btn-auth-social {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 14px 18px;
+  margin-bottom: 20px;
+  background: var(--ivory);
+  color: var(--charcoal);
+  border: 1px solid rgba(26,26,26,0.16);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  transition: all var(--transition);
+}
+
+.btn-auth-social:hover {
+  border-color: var(--charcoal);
+  box-shadow: 0 8px 28px rgba(26,26,26,0.08);
+  transform: translateY(-1px);
+}
+
+.btn-auth-social:disabled {
+  opacity: 0.7;
+  cursor: wait;
+  transform: none;
+}
+
+.social-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+}
+
 .auth-switch {
   font-size: 13px; color: var(--warm-gray); text-align: center;
 }

@@ -355,6 +355,31 @@ const Auth = {
     };
   },
 
+  async loginWithGoogle(options = {}) {
+    const client = this.getClient();
+    if (!client) {
+      return { success: false, message: 'Supabase is not configured.' };
+    }
+
+    const redirectTo = options.redirectTo || `${window.location.origin}${window.location.pathname}`;
+
+    const { error } = await client.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo
+      }
+    });
+
+    if (error) {
+      return {
+        success: false,
+        message: this.formatAuthError(error, 'Could not start Google sign-in.')
+      };
+    }
+
+    return { success: true };
+  },
+
   async logout() {
     const client = this.getClient();
     if (!client) {
@@ -404,6 +429,31 @@ const Auth = {
       success: true,
       user: freshUser
     };
+  },
+
+  async updatePassword(password) {
+    const client = this.getClient();
+    if (!client || !this.currentUser) {
+      return { success: false, message: 'Please sign in again to update your password.' };
+    }
+
+    const pwValidation = this.validatePassword(password || '');
+    if (!pwValidation.valid) {
+      return { success: false, message: 'Password does not meet requirements.' };
+    }
+
+    const { error } = await client.auth.updateUser({
+      password
+    });
+
+    if (error) {
+      return {
+        success: false,
+        message: this.formatAuthError(error, 'Failed to update password.')
+      };
+    }
+
+    return { success: true };
   },
 
   requireLogin() {
