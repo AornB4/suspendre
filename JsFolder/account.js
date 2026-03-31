@@ -4,6 +4,7 @@
 
 document.addEventListener('DOMContentLoaded', async () => {
   await Auth.ready();
+  await ProductData.ready();
 
   if (!Auth.isLoggedIn()) {
     window.location.href = 'login.html';
@@ -143,14 +144,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   renderOrderHistory(user.id);
-  renderWishlist();
+  await renderWishlist();
 });
 
-function renderWishlist() {
+async function renderWishlist() {
   const container = document.getElementById('wishlistContainer');
   if (!container) return;
-  const currentUser = Auth.getCurrentUser();
-  const wishlistIds = currentUser.wishlist || [];
+  const wishlistIds = await Auth.getWishlistIds();
 
   if (wishlistIds.length === 0) {
     container.style.display = 'block';

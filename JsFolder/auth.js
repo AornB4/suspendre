@@ -3,7 +3,6 @@
 // =========================================
 
 const Auth = {
-  EXTRAS_KEY: 'suspendre_profile_extras',
   currentUser: null,
   initPromise: null,
   initialized: false,
@@ -33,38 +32,9 @@ const Auth = {
     return { valid: errors.length === 0, errors };
   },
 
-  readExtrasMap() {
-    try {
-      return JSON.parse(localStorage.getItem(this.EXTRAS_KEY)) || {};
-    } catch (error) {
-      console.warn('Failed to read auth extras from localStorage.', error);
-      return {};
-    }
-  },
-
-  writeExtrasMap(map) {
-    localStorage.setItem(this.EXTRAS_KEY, JSON.stringify(map));
-  },
-
-  getUserExtras(userId) {
-    const map = this.readExtrasMap();
-    return map[userId] || {};
-  },
-
-  saveUserExtras(userId, updates) {
-    const map = this.readExtrasMap();
-    map[userId] = {
-      ...(map[userId] || {}),
-      ...updates
-    };
-    this.writeExtrasMap(map);
-    return map[userId];
-  },
-
   normalizeUser(authUser, profile) {
     if (!authUser) return null;
 
-    const extras = this.getUserExtras(authUser.id);
     const fullName = profile && profile.full_name
       ? profile.full_name
       : authUser.user_metadata && authUser.user_metadata.full_name
@@ -78,7 +48,7 @@ const Auth = {
       role: profile && profile.role ? profile.role : 'customer',
       address: profile && profile.address ? profile.address : '',
       avatar: profile && profile.avatar_url ? profile.avatar_url : '',
-      wishlist: Array.isArray(extras.wishlist) ? extras.wishlist : [],
+      wishlist: [],
       createdAt: profile && profile.created_at ? profile.created_at : authUser.created_at
     };
   },
@@ -110,8 +80,123 @@ const Auth = {
 
     const profile = await this.fetchProfile(authUser.id);
     const normalizedUser = this.normalizeUser(authUser, profile);
+    normalizedUser.wishlist = await this.fetchWishlistIds(authUser.id);
     this.setCurrentUser(normalizedUser);
     return this.getCurrentUser();
+  },
+
+  async fetchWishlistIds(userId) {
+    const client = this.getClient();
+    if (!client || !userId) return [];
+
+    await ProductData.ready();
+
+    const { data, error } = await client
+      .from('wishlist_items')
+      .select('product_id')
+      .eq('user_id', userId);
+
+    if (error) {
+      console.error('Failed to fetch wishlist items.', error);
+      return [];
+    }
+
+    return (data || [])
+      .map(item => {
+        const product = ProductData.getById(item.product_id);
+        return product ? product.id : null;
+      })
+      .filter(Boolean);
+  },
+
+  async getWishlistIds() {
+    const currentUser = this.currentUser;
+    if (!currentUser) return [];
+
+    const ids = await this.fetchWishlistIds(currentUser.id);
+    this.currentUser = {
+      ...currentUser,
+      wishlist: [...ids]
+    };
+    return [...ids];
+  },
+
+  async addWishlistItem(productId) {
+    const client = this.getClient();
+    const currentUser = this.currentUser;
+
+    if (!client || !currentUser) {
+      return { success: false, message: 'Please login to save favorites.' };
+    }
+
+    const product = ProductData.getById(productId);
+    if (!product) {
+      return { success: false, message: 'Product not found.' };
+    }
+
+    const { error } = await client
+      .from('wishlist_items')
+      .upsert({
+        user_id: currentUser.id,
+        product_id: product.dbId
+      }, { onConflict: 'user_id,product_id' });
+
+    if (error) {
+      return { success: false, message: error.message, error };
+    }
+
+    const wishlist = await this.getWishlistIds();
+    this.setCurrentUser({
+      ...currentUser,
+      wishlist
+    });
+
+    return { success: true, wishlist };
+  },
+
+  async removeWishlistItem(productId) {
+    const client = this.getClient();
+    const currentUser = this.currentUser;
+
+    if (!client || !currentUser) {
+      return { success: false, message: 'Please login to save favorites.' };
+    }
+
+    const product = ProductData.getById(productId);
+    if (!product) {
+      return { success: false, message: 'Product not found.' };
+    }
+
+    const { error } = await client
+      .from('wishlist_items')
+      .delete()
+      .eq('user_id', currentUser.id)
+      .eq('product_id', product.dbId);
+
+    if (error) {
+      return { success: false, message: error.message, error };
+    }
+
+    const wishlist = await this.getWishlistIds();
+    this.setCurrentUser({
+      ...currentUser,
+      wishlist
+    });
+
+    return { success: true, wishlist };
+  },
+
+  async toggleWishlistItem(productId) {
+    const currentUser = this.currentUser;
+    if (!currentUser) {
+      return { success: false, message: 'Please login to save favorites.' };
+    }
+
+    const wishlist = currentUser.wishlist || [];
+    if (wishlist.includes(productId)) {
+      return this.removeWishlistItem(productId);
+    }
+    return this.addWishlistItem(productId);
   },
 
   setCurrentUser(user) {
@@ -295,12 +380,10 @@ const Auth = {
     }
 
     const profileUpdates = {};
-    const extrasUpdates = {};
 
     if (typeof updates.name === 'string') profileUpdates.full_name = updates.name.trim();
     if (typeof updates.address === 'string') profileUpdates.address = updates.address;
     if (typeof updates.avatar === 'string') profileUpdates.avatar_url = updates.avatar;
-    if (Array.isArray(updates.wishlist)) extrasUpdates.wishlist = [...updates.wishlist];
 
     if (Object.keys(profileUpdates).length > 0) {
       const { error } = await client
@@ -314,10 +397,6 @@ const Auth = {
           message: this.formatAuthError(error, 'Failed to update profile.')
         };
       }
-    }
-
-    if (Object.keys(extrasUpdates).length > 0) {
-      this.saveUserExtras(userId, extrasUpdates);
     }
 
     const freshUser = await this.refreshCurrentUser();

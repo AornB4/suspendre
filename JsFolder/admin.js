@@ -4,6 +4,7 @@
 
 document.addEventListener('DOMContentLoaded', async () => {
   await Auth.ready();
+  await ProductData.ready();
 
   // Require admin
   if (!Auth.requireAdmin()) return;
@@ -232,7 +233,7 @@ function cancelEdit() {
   });
 }
 
-function saveProduct() {
+async function saveProduct() {
   const name     = getValue('prodName').trim();
   const category = getValue('prodCategory');
   const price    = parseFloat(getValue('prodPrice'));
@@ -240,6 +241,7 @@ function saveProduct() {
   const desc     = getValue('prodDesc').trim();
   const image    = getValue('prodImage').trim();
   const featured = document.getElementById('prodFeatured')?.checked || false;
+  const saveBtn = document.getElementById('saveProductBtn');
 
   if (!name)          { showToast('Please enter a product name.', 'error'); return; }
   if (isNaN(price) || price <= 0) { showToast('Please enter a valid price.', 'error'); return; }
@@ -247,21 +249,51 @@ function saveProduct() {
   if (!desc)          { showToast('Please enter a description.', 'error'); return; }
 
   const productData = { name, category, price, stock, description: desc, image, featured };
+  const originalLabel = saveBtn ? saveBtn.textContent : '';
+
+  if (saveBtn) {
+    saveBtn.disabled = true;
+    saveBtn.textContent = editingId ? 'Saving Changes...' : 'Saving Product...';
+  }
 
   if (editingId) {
-    ProductData.update(editingId, productData);
+    const result = await ProductData.update(editingId, productData, { remote: true });
+    if (!result.success) {
+      showToast(result.message || 'Could not update product.', 'error');
+      if (saveBtn) {
+        saveBtn.disabled = false;
+        saveBtn.textContent = originalLabel;
+      }
+      return;
+    }
+
     showToast(`"${name}" updated successfully.`, 'success');
     editingId = null;
     setText('productFormTitle', 'Add New Product');
     document.getElementById('cancelEditBtn').style.display = 'none';
   } else {
-    ProductData.add(productData);
+    const result = await ProductData.add(productData, { remote: true });
+    if (!result.success) {
+      showToast(result.message || 'Could not add product.', 'error');
+      if (saveBtn) {
+        saveBtn.disabled = false;
+        saveBtn.textContent = originalLabel;
+      }
+      return;
+    }
+
     showToast(`"${name}" added to the collection.`, 'success');
   }
 
   clearForm();
+  await ProductData.ready();
   renderProducts();
   void renderDashboard();
+
+  if (saveBtn) {
+    saveBtn.disabled = false;
+    saveBtn.textContent = originalLabel;
+  }
 
   switchTab('products');
   document.querySelectorAll('.admin-nav-item').forEach(n => {
@@ -288,12 +320,18 @@ function openDeleteModal(productId) {
   document.getElementById('cancelDeleteBtn')?.addEventListener('click', closeDeleteModal, { once: true });
 }
 
-function confirmDelete() {
+async function confirmDelete() {
   if (!pendingDeleteId) return;
   const product = ProductData.getById(pendingDeleteId);
-  ProductData.delete(pendingDeleteId);
+  const result = await ProductData.delete(pendingDeleteId, { remote: true });
+  if (!result.success) {
+    showToast(result.message || 'Could not delete product.', 'error');
+    return;
+  }
+
   pendingDeleteId = null;
   closeDeleteModal();
+  await ProductData.ready();
   renderProducts();
   void renderDashboard();
   showToast(product ? `"${product.name}" deleted.` : 'Product deleted.', 'success');

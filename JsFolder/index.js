@@ -2,7 +2,10 @@
 //  SUSPENDRE — Index Page
 // =========================================
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+  await Auth.ready();
+  await ProductData.ready();
+
   const grid = document.getElementById('featuredGrid');
   if (!grid) return;
 

@@ -2,7 +2,9 @@
 //  SUSPENDRE — Cart Page
 // =========================================
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+  await ProductData.ready();
+
   // Cart is accessible to everyone (guests and logged-in users)
 
   renderCart();

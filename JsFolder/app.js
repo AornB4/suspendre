@@ -252,6 +252,7 @@ function formatDate(iso) {
 // ===== NAV =====
 async function initNav() {
   await Auth.ready();
+  await ProductData.ready();
 
   const user = Auth.getCurrentUser();
   const loginItem = document.getElementById('navLoginItem');
@@ -364,29 +365,33 @@ function buildProductCard(product) {
 
   const wishBtn = card.querySelector('.btn-wishlist');
   if (wishBtn) {
-    wishBtn.addEventListener('click', (e) => {
+    wishBtn.addEventListener('click', async (e) => {
       e.preventDefault();
       e.stopPropagation();
-      const currentUser = Auth.getCurrentUser();
-      if (!currentUser) {
+      if (!Auth.isLoggedIn()) {
         showToast('Please login to save favorites.', 'error');
         setTimeout(() => window.location.href = 'login.html', 1500);
         return;
       }
-      let wishlist = currentUser.wishlist || [];
+
       const svg = wishBtn.querySelector('svg');
-      if (wishlist.includes(product.id)) {
-        wishlist = wishlist.filter(id => id !== product.id);
+      const wasWished = Auth.getCurrentUser()?.wishlist?.includes(product.id);
+      const result = await Auth.toggleWishlistItem(product.id);
+
+      if (!result.success) {
+        showToast(result.message || 'Could not update wishlist right now.', 'error');
+        return;
+      }
+
+      if (wasWished) {
         wishBtn.classList.remove('active');
         svg.setAttribute('fill', 'none');
         showToast('Removed from Wishlist.');
       } else {
-        wishlist.push(product.id);
         wishBtn.classList.add('active');
         svg.setAttribute('fill', 'currentColor');
         showToast('Saved to Wishlist!', 'success');
       }
-      Auth.updateUser(currentUser.id, { wishlist });
     });
   }
 

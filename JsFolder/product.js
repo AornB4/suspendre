@@ -4,6 +4,7 @@
 
 document.addEventListener('DOMContentLoaded', async () => {
   await Auth.ready();
+  await ProductData.ready();
 
   const params = new URLSearchParams(window.location.search);
   const productId = params.get('id');
@@ -97,30 +98,30 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   wishBtn.addEventListener('click', async () => {
-    const user = Auth.getCurrentUser();
-    if (!user) {
+    if (!Auth.isLoggedIn()) {
       showToast('Please login to save favorites.', 'error');
       setTimeout(() => window.location.href = 'login.html', 1500);
       return;
     }
-    
-    let wishlist = user.wishlist || [];
-    if (wishlist.includes(product.id)) {
-      wishlist = wishlist.filter(id => id !== product.id);
+
+    const wasWished = Auth.getCurrentUser()?.wishlist?.includes(product.id);
+    const result = await Auth.toggleWishlistItem(product.id);
+
+    if (!result.success) {
+      showToast(result.message || 'Could not update wishlist.', 'error');
+      return;
+    }
+
+    if (wasWished) {
       wishSvg.setAttribute('fill', 'none');
       wishSvg.setAttribute('stroke', 'currentColor');
       wishBtn.style.borderColor = 'var(--border-light)';
       showToast('Removed from Wishlist.');
     } else {
-      wishlist.push(product.id);
       wishSvg.setAttribute('fill', '#c0392b');
       wishSvg.setAttribute('stroke', '#c0392b');
       wishBtn.style.borderColor = '#c0392b';
       showToast('Saved to Wishlist!', 'success');
-    }
-    const result = await Auth.updateUser(user.id, { wishlist });
-    if (!result.success) {
-      showToast(result.message || 'Could not update wishlist.', 'error');
     }
   });
 

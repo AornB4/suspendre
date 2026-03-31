@@ -2,7 +2,10 @@
 //  SUSPENDRE — Shop Page
 // =========================================
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+  await Auth.ready();
+  await ProductData.ready();
+
   const grid = document.getElementById('shopGrid');
   const filterCat = document.getElementById('filterCategory');
   const sortBy = document.getElementById('sortBy');
