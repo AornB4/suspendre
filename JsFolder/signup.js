@@ -2,7 +2,8 @@
 //  SUSPENDRE — Signup Page
 // =========================================
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+  await Auth.ready();
   // Redirect if already logged in
   if (Auth.isLoggedIn()) {
     window.location.href = 'shop.html';
@@ -115,8 +116,8 @@ document.addEventListener('DOMContentLoaded', () => {
       signupBtn.textContent = 'Creating account…';
       signupBtn.disabled = true;
 
-      setTimeout(() => {
-        const result = Auth.signup(name, email, password);
+      setTimeout(async () => {
+        const result = await Auth.signup(name, email, password);
 
         if (result.success) {
           showAlert(`Welcome to SUSPENDRE, ${result.user.name}!`, 'success');

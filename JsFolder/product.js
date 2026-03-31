@@ -2,7 +2,9 @@
 //  SUSPENDRE — Product Page Logic
 // =========================================
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+  await Auth.ready();
+
   const params = new URLSearchParams(window.location.search);
   const productId = params.get('id');
 
@@ -94,7 +96,7 @@ document.addEventListener('DOMContentLoaded', () => {
     wishBtn.style.borderColor = '#c0392b';
   }
 
-  wishBtn.addEventListener('click', () => {
+  wishBtn.addEventListener('click', async () => {
     const user = Auth.getCurrentUser();
     if (!user) {
       showToast('Please login to save favorites.', 'error');
@@ -116,7 +118,10 @@ document.addEventListener('DOMContentLoaded', () => {
       wishBtn.style.borderColor = '#c0392b';
       showToast('Saved to Wishlist!', 'success');
     }
-    Auth.updateUser(user.id, { wishlist });
+    const result = await Auth.updateUser(user.id, { wishlist });
+    if (!result.success) {
+      showToast(result.message || 'Could not update wishlist.', 'error');
+    }
   });
 
   // Reveal UI

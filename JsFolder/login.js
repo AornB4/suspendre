@@ -2,7 +2,8 @@
 //  SUSPENDRE — Login Page
 // =========================================
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+  await Auth.ready();
   // Redirect if already logged in
   if (Auth.isLoggedIn()) {
     window.location.href = Auth.isAdmin() ? 'admin.html' : 'shop.html';
@@ -44,8 +45,8 @@ document.addEventListener('DOMContentLoaded', () => {
       loginBtn.textContent = 'Signing in…';
       loginBtn.disabled = true;
 
-      setTimeout(() => {
-        const result = Auth.login(email, password);
+      setTimeout(async () => {
+        const result = await Auth.login(email, password);
 
         if (result.success) {
           showAlert(`Welcome back, ${result.user.name}.`, 'success');
@@ -79,6 +80,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Demo fill function (called from HTML)
 function fillDemo(type) {
+  void type;
+  showToast('Demo accounts are disabled after the Supabase auth migration.', 'default');
+  return;
+
   const emailInput = document.getElementById('loginEmail');
   const passwordInput = document.getElementById('loginPassword');
   if (type === 'admin') {

@@ -143,7 +143,9 @@ function renderCart() {
 // Pending order data (not yet finalized)
 let pendingOrderItems = null;
 
-function handleCheckout() {
+async function handleCheckout() {
+  await Auth.ready();
+
   const items = Cart.getItems();
   if (items.length === 0) return;
 

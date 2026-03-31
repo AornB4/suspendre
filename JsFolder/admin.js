@@ -2,12 +2,14 @@
 //  SUSPENDRE — Admin Panel
 // =========================================
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+  await Auth.ready();
+
   // Require admin
   if (!Auth.requireAdmin()) return;
 
   initAdminNav();
-  renderDashboard();
+  await renderDashboard();
   renderProducts();
   renderAllOrders();
   initProductForm();
@@ -34,16 +36,16 @@ function switchTab(tabId) {
 }
 
 // ===== DASHBOARD =====
-function renderDashboard() {
+async function renderDashboard() {
   const products = ProductData.getAll();
   const orders   = Orders.getAll();
-  const users    = JSON.parse(localStorage.getItem('suspendre_users') || '[]');
+  const userCount = await Auth.getUserCount();
   const revenue  = orders.reduce((s, o) => s + o.total, 0);
 
   setText('statProducts', products.length);
   setText('statOrders', orders.length);
   setText('statRevenue', formatPrice(revenue));
-  setText('statUsers', users.length);
+  setText('statUsers', userCount);
 
   const recentEl = document.getElementById('recentOrdersList');
   if (!recentEl) return;
@@ -259,7 +261,7 @@ function saveProduct() {
 
   clearForm();
   renderProducts();
-  renderDashboard();
+  void renderDashboard();
 
   switchTab('products');
   document.querySelectorAll('.admin-nav-item').forEach(n => {
@@ -293,7 +295,7 @@ function confirmDelete() {
   pendingDeleteId = null;
   closeDeleteModal();
   renderProducts();
-  renderDashboard();
+  void renderDashboard();
   showToast(product ? `"${product.name}" deleted.` : 'Product deleted.', 'success');
 }
 

@@ -55,10 +55,11 @@
 
       <p class="auth-switch">Don't have an account? <a href="signup.html">Sign up</a></p>
 
-      <div class="auth-divider"><span>or try demo</span></div>
+      <div class="auth-divider"><span>account access</span></div>
       <div class="demo-accounts">
-        <button class="btn-demo" onclick="fillDemo('user')">Demo User</button>
-        <button class="btn-demo" onclick="fillDemo('admin')">Demo Admin</button>
+        <p style="font-size:13px; color:var(--warm-gray); text-align:center;">
+          Use a real Supabase account. Demo credentials were removed after the auth migration.
+        </p>
       </div>
     </div>
     <div class="auth-visual">
@@ -75,6 +76,10 @@
   </div>
 
   <div class="toast" id="toast"></div>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="JsFolder/supabase-config.js"></script>
+  <script src="JsFolder/supabase-client.js"></script>
+  <script src="JsFolder/supabase-smoke.js"></script>
   <script src="JsFolder/data.js"></script>
   <script src="JsFolder/auth.js"></script>
   <script src="JsFolder/app.js"></script>

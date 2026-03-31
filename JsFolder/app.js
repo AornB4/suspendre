@@ -250,13 +250,23 @@ function formatDate(iso) {
 }
 
 // ===== NAV =====
-function initNav() {
+async function initNav() {
+  await Auth.ready();
+
   const user = Auth.getCurrentUser();
   const loginItem = document.getElementById('navLoginItem');
   const signupItem = document.getElementById('navSignupItem');
   const logoutItem = document.getElementById('navLogoutItem');
   const cartItem = document.getElementById('navCartItem');
   const adminItem = document.getElementById('navAdminItem');
+
+  if (loginItem) {
+    loginItem.style.display = '';
+    loginItem.innerHTML = '<a href="login.html">Login</a>';
+  }
+  if (signupItem) signupItem.style.display = '';
+  if (logoutItem) logoutItem.style.display = 'none';
+  if (adminItem) adminItem.style.display = 'none';
 
   if (user) {
     if (loginItem) {
@@ -290,10 +300,10 @@ function initNav() {
 
   const logoutBtn = document.getElementById('logoutBtn');
   if (logoutBtn) {
-    logoutBtn.addEventListener('click', (e) => {
+    logoutBtn.addEventListener('click', async (e) => {
       e.preventDefault();
       Cart.clear();
-      Auth.logout();
+      await Auth.logout();
     });
   }
 

@@ -2,7 +2,9 @@
 //  SUSPENDRE — Account Dashboard Logic
 // =========================================
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+  await Auth.ready();
+
   if (!Auth.isLoggedIn()) {
     window.location.href = 'login.html';
     return;
@@ -49,9 +51,9 @@ document.addEventListener('DOMContentLoaded', () => {
     addressDisplay.style.display = 'block';
   });
 
-  document.getElementById('saveAddressBtn').addEventListener('click', () => {
+  document.getElementById('saveAddressBtn').addEventListener('click', async () => {
     const newAddress = addressInput.value.trim();
-    const res = Auth.updateUser(user.id, { address: newAddress });
+    const res = await Auth.updateUser(user.id, { address: newAddress });
     if (res.success) {
       renderAddress();
       addressEdit.style.display = 'none';
@@ -94,7 +96,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const reader = new FileReader();
     reader.onload = function(event) {
       const img = new Image();
-      img.onload = function() {
+      img.onload = async function() {
         const canvas = document.createElement('canvas');
         const MAX_SIZE = 200;
         let width = img.width;
@@ -113,7 +115,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
         
-        const res = Auth.updateUser(user.id, { avatar: dataUrl });
+        const res = await Auth.updateUser(user.id, { avatar: dataUrl });
         if (res.success) {
           renderAvatar();
           
