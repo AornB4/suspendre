@@ -91,11 +91,10 @@ function fillDemo(type) {
     passwordInput.value = 'Admin@123';
   } else {
     // Create a demo user if not exists
-    const users = JSON.parse(localStorage.getItem('suspendre_users') || '[]');
-    const demoExists = users.find(u => u.email === 'guest@suspendre.com');
+    const demoExists = false;
     if (!demoExists) {
-      Auth.signup('Demo Guest', 'guest@suspendre.com', 'Guest@123');
-      Auth.logout(); // sign out after creating
+      showToast('Demo accounts are disabled after the Supabase auth migration.', 'default');
+      return;
     }
     emailInput.value = 'guest@suspendre.com';
     passwordInput.value = 'Guest@123';

@@ -135,38 +135,21 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 // ===== REVIEWS SYSTEM =====
 const ReviewsData = {
-  KEY: 'suspendre_reviews',
   getAll() {
-    let reviews = JSON.parse(localStorage.getItem(this.KEY));
-    if (!reviews) {
-      // Seed some incredible dummy reviews
-      reviews = [
-        { id: 1, productId: 'p1', userName: 'Eleanor V.', rating: 5, text: 'These hangers completely revitalized my closet. The solid brass hook glides silently on the rail, and the shoulder flare prevents any puckering on my silk blouses. Worth every penny.', date: new Date(Date.now() - 86400000 * 4).toISOString() },
-        { id: 2, productId: 'p2', userName: 'Jonathan P.', rating: 5, text: 'You don\'t realize what a difference a structural hanger makes until you use one of these. Impeccable craftsmanship.', date: new Date(Date.now() - 86400000 * 12).toISOString() },
-        { id: 3, productId: 'p1', userName: 'Alistair C.', rating: 4, text: 'Beautiful finish. They are somewhat heavier than expected, which screams quality, but took some adjusting on my lightweight racks.', date: new Date(Date.now() - 86400000 * 20).toISOString() }
-      ];
-      localStorage.setItem(this.KEY, JSON.stringify(reviews));
-    }
-    return reviews;
+    return [];
   },
-  getByProduct(productId) {
-    return this.getAll().filter(r => r.productId === productId).sort((a,b) => new Date(b.date) - new Date(a.date));
+  getByProduct() {
+    return [];
   },
-  addReview(productId, userName, rating, text) {
-    const reviews = this.getAll();
-    reviews.unshift({
-      id: Date.now(),
-      productId,
-      userName,
-      rating,
-      text,
-      date: new Date().toISOString()
-    });
-    localStorage.setItem(this.KEY, JSON.stringify(reviews));
+  addReview() {
+    console.warn('Legacy local reviews are disabled. SupabaseReviewsData is the active review source.');
   }
 };
 
 function initReviews(productId, productName) {
+  void productName;
+  return initSupabaseReviews(productId);
+
   const section = document.getElementById('pdpReviews');
   section.style.display = 'block';
 
@@ -238,6 +221,8 @@ function initReviews(productId, productName) {
 }
 
 function renderReviewsList(productId) {
+  return renderSupabaseReviewsList(productId);
+
   const reviews = ReviewsData.getByProduct(productId);
   const listEl = document.getElementById('reviewsList');
   const countEl = document.getElementById('reviewCount');
