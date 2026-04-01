@@ -724,6 +724,44 @@ const Orders = {
     } : null;
   },
 
+  async updateStatus(orderId, nextStatus) {
+    await this.ready();
+
+    const normalizedStatus = String(nextStatus || '').trim().toLowerCase();
+    const allowedStatuses = ['pending', 'processing', 'shipped', 'cancelled'];
+    if (!allowedStatuses.includes(normalizedStatus)) {
+      return { success: false, message: 'That order status is not supported.' };
+    }
+
+    const existingOrder = this.cache.find(order => order.id === orderId);
+    if (!existingOrder) {
+      return { success: false, message: 'Order not found.' };
+    }
+
+    const client = this.getClient();
+    if (!client || this.source === 'fallback') {
+      this.cache = this.cache.map(order => (
+        order.id === orderId
+          ? { ...order, status: normalizedStatus }
+          : order
+      ));
+      this.persistCache();
+      return { success: true, order: this.getById(orderId) };
+    }
+
+    const { error } = await client
+      .from('orders')
+      .update({ status: normalizedStatus })
+      .eq('id', orderId);
+
+    if (error) {
+      return { success: false, message: error.message || 'Could not update order status.', error };
+    }
+
+    await this.refresh();
+    return { success: true, order: this.getById(orderId) };
+  },
+
   buildOrderItems(cartItems) {
     return cartItems.map(item => {
       const product = ProductData.getById(item.productId);

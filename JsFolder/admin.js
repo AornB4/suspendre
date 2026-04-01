@@ -2,19 +2,25 @@
 //  SUSPENDRE — Admin Panel
 // =========================================
 
+const adminOrderFilters = {
+  search: '',
+  status: 'all',
+  sort: 'newest'
+};
+
 document.addEventListener('DOMContentLoaded', async () => {
   await Auth.ready();
   await ProductData.ready();
   await Orders.ready();
 
-  // Require admin
   if (!Auth.requireAdmin()) return;
 
   initAdminNav();
+  initProductForm();
+  initOrderControls();
   await renderDashboard();
   renderProducts();
   renderAllOrders();
-  initProductForm();
 });
 
 // ===== TAB NAVIGATION =====
@@ -37,12 +43,39 @@ function switchTab(tabId) {
   if (target) target.classList.add('active');
 }
 
+function initOrderControls() {
+  const searchInput = document.getElementById('adminOrderSearch');
+  const statusFilter = document.getElementById('adminOrderStatusFilter');
+  const sortFilter = document.getElementById('adminOrderSort');
+
+  if (searchInput) {
+    searchInput.addEventListener('input', () => {
+      adminOrderFilters.search = searchInput.value.trim().toLowerCase();
+      renderAllOrders();
+    });
+  }
+
+  if (statusFilter) {
+    statusFilter.addEventListener('change', () => {
+      adminOrderFilters.status = statusFilter.value;
+      renderAllOrders();
+    });
+  }
+
+  if (sortFilter) {
+    sortFilter.addEventListener('change', () => {
+      adminOrderFilters.sort = sortFilter.value;
+      renderAllOrders();
+    });
+  }
+}
+
 // ===== DASHBOARD =====
 async function renderDashboard() {
   const products = ProductData.getAll();
-  const orders   = Orders.getAll();
+  const orders = Orders.getAll();
   const userCount = await Auth.getUserCount();
-  const revenue  = orders.reduce((s, o) => s + o.total, 0);
+  const revenue = orders.reduce((s, o) => s + o.total, 0);
 
   setText('statProducts', products.length);
   setText('statOrders', orders.length);
@@ -59,26 +92,29 @@ async function renderDashboard() {
 
   recentEl.innerHTML = '';
   orders.slice(0, 8).forEach(order => {
+    const fulfillmentMeta = getOrderStatusMeta(order.status);
+    const paymentMeta = getPaymentStatusMeta(order.paymentStatus);
+    const leadItem = Array.isArray(order.items) && order.items.length > 0 ? order.items[0] : null;
     const row = document.createElement('div');
     row.className = 'order-row';
-
-    const idSpan = document.createElement('span');
-    idSpan.className = 'order-id';
-    idSpan.textContent = order.id;
-
-    const userSpan = document.createElement('span');
-    userSpan.className = 'order-user';
-    userSpan.textContent = order.userEmail ? `${order.userName} <${order.userEmail}>` : order.userName;
-
-    const amountSpan = document.createElement('span');
-    amountSpan.className = 'order-amount';
-    amountSpan.textContent = formatPrice(order.total);
-
-    const dateSpan = document.createElement('span');
-    dateSpan.className = 'order-date';
-    dateSpan.textContent = formatDate(order.createdAt);
-
-    row.append(idSpan, userSpan, amountSpan, dateSpan);
+    row.innerHTML = `
+      <div class="order-row-main">
+        <div class="order-row-thumb-wrap">
+          <img class="order-row-thumb" src="${safeString(getOrderItemImage(leadItem))}" alt="${safeString(leadItem ? leadItem.name : 'Order item')}" loading="lazy" onerror="this.onerror=null;this.src='./images/placeholder.svg'">
+        </div>
+        <div class="order-row-copy">
+          <span class="order-id">Ref. ${safeString(shortOrderId(order.id))}</span>
+          <span class="order-row-title">${safeString(order.userName || 'Suspendre Customer')}</span>
+          <span class="order-user">${safeString(order.userEmail || (leadItem ? leadItem.name : 'Customer order'))}</span>
+        </div>
+      </div>
+      <div class="order-row-statuses">
+        <span class="admin-status-pill ${fulfillmentMeta.className}">${fulfillmentMeta.label}</span>
+        <span class="admin-status-pill ${paymentMeta.className}">${paymentMeta.label}</span>
+      </div>
+      <span class="order-amount">${formatPrice(order.total)}</span>
+      <span class="order-date">${formatDate(order.createdAt)}</span>
+    `;
     recentEl.appendChild(row);
   });
 }
@@ -146,10 +182,15 @@ function renderProducts() {
 // ===== ALL ORDERS =====
 function renderAllOrders() {
   const el = document.getElementById('allOrdersList');
+  const resultsEl = document.getElementById('adminOrderResultsCount');
   if (!el) return;
 
-  const orders = Orders.getAll();
+  const orders = getFilteredOrders();
   el.innerHTML = '';
+
+  if (resultsEl) {
+    resultsEl.textContent = `${orders.length} order${orders.length === 1 ? '' : 's'}`;
+  }
 
   if (orders.length === 0) {
     el.innerHTML = '<p class="all-orders-empty">No orders have been placed yet.</p>';
@@ -157,32 +198,70 @@ function renderAllOrders() {
   }
 
   orders.forEach(order => {
-    const card = document.createElement('div');
-    card.style.cssText = 'padding:20px;border:1px solid var(--border-light);margin-bottom:12px;background:var(--cream);';
+    const fulfillmentMeta = getOrderStatusMeta(order.status);
+    const paymentMeta = getPaymentStatusMeta(order.paymentStatus);
+    const leadItem = Array.isArray(order.items) && order.items.length > 0 ? order.items[0] : null;
+    const itemCount = Array.isArray(order.items)
+      ? order.items.reduce((sum, item) => sum + (Number(item.qty) || 0), 0)
+      : 0;
+    const card = document.createElement('article');
+    card.className = 'admin-order-card';
+    card.dataset.orderId = order.id;
+    card.innerHTML = `
+      <div class="admin-order-header">
+        <div class="admin-order-hero">
+          <div class="admin-order-thumb-wrap">
+            <img class="admin-order-thumb" src="${safeString(getOrderItemImage(leadItem))}" alt="${safeString(leadItem ? leadItem.name : 'Order item')}" loading="lazy" onerror="this.onerror=null;this.src='./images/placeholder.svg'">
+          </div>
+          <div class="admin-order-hero-copy">
+            <span class="admin-order-kicker">Customer Order</span>
+            <h3>${safeString(order.userName || 'Suspendre Customer')}</h3>
+            <p>${safeString(order.userEmail || 'No customer email saved')}</p>
+            <span class="admin-order-reference">Ref. ${safeString(order.id)}</span>
+          </div>
+        </div>
+        <div class="admin-order-summary">
+          <span class="admin-order-total">${formatPrice(order.total)}</span>
+          <span class="admin-order-date">
+            <span class="admin-inline-icon" aria-hidden="true">${getAdminIcon('calendar')}</span>
+            ${formatDate(order.createdAt)}
+          </span>
+          <span class="admin-order-count">${itemCount} item${itemCount === 1 ? '' : 's'}</span>
+        </div>
+      </div>
+      <div class="admin-order-status-row">
+        <span class="admin-status-pill ${fulfillmentMeta.className}">${fulfillmentMeta.label}</span>
+        <span class="admin-status-pill ${paymentMeta.className}">${paymentMeta.label}</span>
+        <span class="admin-order-method">
+          <span class="admin-inline-icon" aria-hidden="true">${getAdminIcon('card')}</span>
+          ${safeString(formatPaymentMethodLabel(order.paymentMethod))}
+        </span>
+      </div>
+      <div class="admin-order-body">
+        <div class="admin-order-copy">
+          <span class="admin-order-section-label">Order Snapshot</span>
+          <p>${safeString(buildOrderPreview(order.items))}</p>
+        </div>
+        <div class="admin-order-controls">
+          <label class="admin-order-control">
+            <span>Fulfillment status</span>
+            <select class="admin-status-select" data-order-id="${safeString(order.id)}">
+              ${renderStatusOptions(order.status)}
+            </select>
+          </label>
+          <button class="btn-primary btn-admin-status" type="button" data-order-id="${safeString(order.id)}">Update Status</button>
+        </div>
+      </div>
+    `;
 
-    const itemsList = order.items.map(i => `${i.name} × ${i.qty}`).join(', ');
+    const saveBtn = card.querySelector('.btn-admin-status');
+    const select = card.querySelector('.admin-status-select');
+    if (saveBtn && select) {
+      saveBtn.addEventListener('click', async () => {
+        await handleOrderStatusUpdate(order.id, select.value, saveBtn);
+      });
+    }
 
-    const headerDiv = document.createElement('div');
-    headerDiv.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;';
-    const orderId = document.createElement('strong');
-    orderId.style.cssText = 'font-family:var(--font-display);font-size:1.05rem';
-    orderId.textContent = order.id;
-    const orderTotal = document.createElement('strong');
-    orderTotal.style.cssText = 'font-family:var(--font-display);font-size:1.3rem';
-    orderTotal.textContent = formatPrice(order.total);
-    headerDiv.append(orderId, orderTotal);
-
-    const detailDiv = document.createElement('div');
-    detailDiv.style.cssText = 'font-size:13px;color:var(--warm-gray);margin-bottom:4px;';
-    detailDiv.textContent = order.userEmail
-      ? `${order.userName} · ${order.userEmail} · ${formatDate(order.createdAt)}`
-      : `${order.userName} · ${formatDate(order.createdAt)}`;
-
-    const itemsDiv = document.createElement('div');
-    itemsDiv.style.cssText = 'font-size:12px;color:var(--warm-gray);font-style:italic';
-    itemsDiv.textContent = `${itemsList} · ${order.status || 'processing'}`;
-
-    card.append(headerDiv, detailDiv, itemsDiv);
     el.appendChild(card);
   });
 }
@@ -291,7 +370,7 @@ async function saveProduct() {
   clearForm();
   await ProductData.ready();
   renderProducts();
-  void renderDashboard();
+  await renderDashboard();
 
   if (saveBtn) {
     saveBtn.disabled = false;
@@ -336,7 +415,7 @@ async function confirmDelete() {
   closeDeleteModal();
   await ProductData.ready();
   renderProducts();
-  void renderDashboard();
+  await renderDashboard();
   showToast(product ? `"${product.name}" deleted.` : 'Product deleted.', 'success');
 }
 
@@ -347,6 +426,164 @@ function closeDeleteModal() {
 }
 
 // ===== HELPERS =====
+async function handleOrderStatusUpdate(orderId, nextStatus, button) {
+  const originalLabel = button ? button.textContent : '';
+  if (button) {
+    button.disabled = true;
+    button.textContent = 'Updating...';
+  }
+
+  const result = await Orders.updateStatus(orderId, nextStatus);
+  if (!result.success) {
+    showToast(result.message || 'Could not update order status.', 'error');
+    if (button) {
+      button.disabled = false;
+      button.textContent = originalLabel;
+    }
+    return;
+  }
+
+  await renderDashboard();
+  renderAllOrders();
+  showToast(`Order marked ${formatTitleCase(nextStatus)}.`, 'success');
+}
+
+function getOrderStatusMeta(status) {
+  const normalized = String(status || '').toLowerCase();
+  if (normalized === 'shipped') return { label: 'Shipped', className: 'status-shipped' };
+  if (normalized === 'cancelled') return { label: 'Cancelled', className: 'status-cancelled' };
+  if (normalized === 'pending') return { label: 'Pending', className: 'status-pending' };
+  return { label: 'Processing', className: 'status-processing' };
+}
+
+function getPaymentStatusMeta(status) {
+  const normalized = String(status || '').toLowerCase();
+  if (normalized === 'paid') return { label: 'Payment Confirmed', className: 'status-paid' };
+  if (normalized === 'failed') return { label: 'Payment Failed', className: 'status-cancelled' };
+  if (normalized === 'refunded') return { label: 'Refunded', className: 'status-pending' };
+  return { label: 'Payment Pending', className: 'status-pending' };
+}
+
+function formatPaymentMethodLabel(method) {
+  const normalized = String(method || '').trim().toLowerCase();
+  if (!normalized) return 'Not specified';
+  if (normalized === 'paypal') return 'PayPal';
+  return normalized
+    .split(/[\s_-]+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
+}
+
+function formatTitleCase(value) {
+  return String(value || '')
+    .split(/[\s_-]+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
+}
+
+function buildOrderPreview(items) {
+  if (!Array.isArray(items) || items.length === 0) {
+    return 'No item summary is available for this order yet.';
+  }
+
+  const preview = items
+    .slice(0, 3)
+    .map((item) => `${item.name} x ${item.qty}`)
+    .join(', ');
+
+  return items.length > 3 ? `${preview}, +${items.length - 3} more` : preview;
+}
+
+function shortOrderId(orderId) {
+  const value = String(orderId || '');
+  return value.length > 12 ? `${value.slice(0, 8)}...${value.slice(-4)}` : value;
+}
+
+function getOrderItemImage(item) {
+  if (!item) return './images/placeholder.svg';
+  const product = ProductData.getById(item.productId);
+  return product ? ProductData.getImageSrc(product) : './images/placeholder.svg';
+}
+
+function safeString(value) {
+  return String(value == null ? '' : value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function renderStatusOptions(currentStatus) {
+  const normalized = String(currentStatus || '').toLowerCase();
+  return ['pending', 'processing', 'shipped', 'cancelled']
+    .map((status) => `<option value="${status}"${status === normalized ? ' selected' : ''}>${formatTitleCase(status)}</option>`)
+    .join('');
+}
+
+function getFilteredOrders() {
+  const filtered = Orders.getAll().filter((order) => {
+    const matchesStatus = adminOrderFilters.status === 'all'
+      ? true
+      : String(order.status || '').toLowerCase() === adminOrderFilters.status;
+
+    if (!matchesStatus) return false;
+
+    if (!adminOrderFilters.search) return true;
+
+    const haystack = [
+      order.id,
+      order.userName,
+      order.userEmail,
+      ...(Array.isArray(order.items) ? order.items.map((item) => item.name) : [])
+    ]
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase();
+
+    return haystack.includes(adminOrderFilters.search);
+  });
+
+  filtered.sort((a, b) => {
+    if (adminOrderFilters.sort === 'oldest') {
+      return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+    }
+    if (adminOrderFilters.sort === 'highest') {
+      return b.total - a.total;
+    }
+    if (adminOrderFilters.sort === 'lowest') {
+      return a.total - b.total;
+    }
+    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+  });
+
+  return filtered;
+}
+
+function getAdminIcon(name) {
+  if (name === 'calendar') {
+    return `
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="5" width="18" height="16" rx="2"></rect>
+        <path d="M16 3v4M8 3v4M3 10h18"></path>
+      </svg>
+    `;
+  }
+
+  if (name === 'card') {
+    return `
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="5" width="18" height="14" rx="2"></rect>
+        <path d="M3 10h18"></path>
+      </svg>
+    `;
+  }
+
+  return '';
+}
+
 function setText(id, val) {
   const el = document.getElementById(id);
   if (el) el.textContent = val;

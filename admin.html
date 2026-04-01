@@ -103,6 +103,37 @@
           <h1>Orders</h1>
           <p>All customer orders</p>
         </div>
+        <div class="admin-order-toolbar">
+          <label class="admin-order-search">
+            <span class="admin-toolbar-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="7"></circle>
+                <path d="m20 20-3.5-3.5"></path>
+              </svg>
+            </span>
+            <input type="search" id="adminOrderSearch" placeholder="Search by order ref, customer, or email" />
+          </label>
+          <label class="admin-order-filter">
+            <span>Status</span>
+            <select id="adminOrderStatusFilter">
+              <option value="all">All statuses</option>
+              <option value="pending">Pending</option>
+              <option value="processing">Processing</option>
+              <option value="shipped">Shipped</option>
+              <option value="cancelled">Cancelled</option>
+            </select>
+          </label>
+          <label class="admin-order-filter">
+            <span>Sort</span>
+            <select id="adminOrderSort">
+              <option value="newest">Newest first</option>
+              <option value="oldest">Oldest first</option>
+              <option value="highest">Highest total</option>
+              <option value="lowest">Lowest total</option>
+            </select>
+          </label>
+          <div class="admin-order-results" id="adminOrderResultsCount">0 orders</div>
+        </div>
         <div id="allOrdersList"></div>
       </div>
 
