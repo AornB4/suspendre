@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Shop — SUSPENDRE</title>
+  <title>Shop - SUSPENDRE</title>
   <link rel="icon" type="image/png" href="images/favicon.png?v=1" />
   <link rel="stylesheet" href="cssFolder/styles.css" />
   <link rel="stylesheet" href="cssFolder/chatbot.css" />
@@ -40,32 +40,63 @@
   </div>
 
   <div class="shop-controls">
-    <div class="shop-filter" style="display:flex; flex-wrap:wrap; gap:16px; align-items:center;">
-      <div style="position:relative;">
-        <input type="text" id="searchInput" placeholder="Search hangers..."
-          style="padding:10px 16px 10px 36px; border:1px solid var(--border-light); border-radius:4px; font-family:var(--font-body); font-size:0.95rem; min-width:250px; outline:none; transition:border-color 0.2s;"
-          onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='var(--border-light)'">
-        <svg viewBox="0 0 24 24" width="16" height="16" stroke="var(--warm-gray)" stroke-width="2" fill="none"
-          style="position:absolute; left:12px; top:50%; transform:translateY(-50%);">
+    <div class="shop-discovery">
+      <div class="shop-search">
+        <input type="text" id="searchInput" placeholder="Search by piece, material, or wardrobe need">
+        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"
+          aria-hidden="true">
           <circle cx="11" cy="11" r="8"></circle>
           <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
         </svg>
       </div>
-      <select id="filterCategory">
-        <option value="all">All Categories</option>
-        <option value="wood">Wood</option>
-        <option value="metal">Metal</option>
-        <option value="velvet">Velvet</option>
-        <option value="gold">Gold</option>
-      </select>
-      <select id="sortBy">
-        <option value="default">Sort: Default</option>
-        <option value="price-asc">Price: Low to High</option>
-        <option value="price-desc">Price: High to Low</option>
-        <option value="name">Name A–Z</option>
-      </select>
+      <div class="shop-filter-group" role="group" aria-label="Material filter">
+        <button type="button" class="filter-chip active" data-category="all">All Pieces</button>
+        <button type="button" class="filter-chip" data-category="wood">Wood</button>
+        <button type="button" class="filter-chip" data-category="metal">Metal</button>
+        <button type="button" class="filter-chip" data-category="velvet">Velvet</button>
+        <button type="button" class="filter-chip" data-category="gold">Gold</button>
+      </div>
+      <div class="shop-filter-row">
+        <label class="shop-select">
+          <span class="shop-select-label">Availability</span>
+          <select id="availabilityFilter">
+            <option value="all">All availability</option>
+            <option value="in-stock">In Stock</option>
+            <option value="low-stock">Low Stock</option>
+            <option value="sold-out">Sold Out</option>
+          </select>
+        </label>
+
+        <label class="shop-select">
+          <span class="shop-select-label">Price</span>
+          <select id="priceFilter">
+            <option value="all">All price points</option>
+            <option value="under-250">Under $250</option>
+            <option value="250-500">$250 to $500</option>
+            <option value="over-500">Over $500</option>
+          </select>
+        </label>
+
+        <label class="shop-select">
+          <span class="shop-select-label">Sort</span>
+          <select id="sortBy">
+            <option value="curated">Curated</option>
+            <option value="relevance">Best Match</option>
+            <option value="price-asc">Price: Low to High</option>
+            <option value="price-desc">Price: High to Low</option>
+            <option value="name">Name A-Z</option>
+            <option value="stock-desc">Most Available</option>
+          </select>
+        </label>
+
+        <button type="button" class="shop-clear-btn" id="clearDiscoveryBtn">Reset</button>
+      </div>
+
+      <div class="shop-results-meta">
+        <p class="product-count" id="productCount">- products</p>
+        <p class="shop-active-summary" id="activeSummary">Showing the full Suspendre collection.</p>
+      </div>
     </div>
-    <p class="product-count" id="productCount">— products</p>
   </div>
 
   <div class="products-grid shop-grid" id="shopGrid">
