@@ -157,6 +157,279 @@
   line-height: 1.6;
 }
 
+.info-block-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 8px;
+}
+
+.account-inline-action {
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: uppercase;
+  color: var(--charcoal-soft);
+  border-bottom: 1px solid currentColor;
+  flex-shrink: 0;
+}
+
+.info-helper {
+  font-size: 0.88rem;
+  color: var(--warm-gray);
+  line-height: 1.6;
+  margin-top: 6px;
+}
+
+.account-collapsible {
+  border-top: 1px solid var(--border-light);
+  padding-top: 18px;
+}
+
+.account-section-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.account-section-toggle-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: rgba(215, 187, 114, 0.12);
+  color: #9a741c;
+  border: 1px solid rgba(176, 138, 42, 0.18);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 38px;
+}
+
+.account-section-toggle-copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.account-section-toggle-label {
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--warm-gray);
+}
+
+.account-section-toggle-summary {
+  font-size: 0.96rem;
+  color: var(--charcoal);
+  line-height: 1.5;
+}
+
+.account-section-toggle-chevron {
+  margin-left: auto;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--border-light);
+  color: var(--warm-gray);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.15rem;
+  transition: transform var(--transition), color var(--transition), border-color var(--transition);
+}
+
+.account-collapsible.open .account-section-toggle-chevron {
+  transform: rotate(45deg);
+  color: var(--charcoal);
+  border-color: rgba(43, 43, 43, 0.18);
+}
+
+.account-collapsible-content {
+  margin-top: 16px;
+}
+
+.inline-edit-panel {
+  margin-top: 12px;
+  padding: 18px;
+  border: 1px solid var(--border-light);
+  border-radius: 4px;
+  background: rgba(252, 248, 242, 0.6);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.inline-edit-panel input,
+.inline-edit-panel textarea {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid var(--border-light);
+  border-radius: 4px;
+  font-family: var(--font-body);
+  font-size: 0.98rem;
+  background: #fff;
+  transition: border-color var(--transition), box-shadow var(--transition);
+}
+
+.inline-edit-panel input:focus,
+.inline-edit-panel textarea:focus {
+  outline: none;
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px rgba(184, 151, 58, 0.08);
+}
+
+.inline-edit-panel textarea {
+  resize: vertical;
+  min-height: 112px;
+}
+
+.inline-edit-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.address-book-block {
+  margin-top: 8px;
+}
+
+.address-book-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.address-book-empty {
+  padding: 18px;
+  border: 1px dashed var(--border-light);
+  border-radius: 4px;
+  background: rgba(251, 248, 244, 0.78);
+}
+
+.address-book-empty p {
+  margin-bottom: 4px;
+  font-size: 1rem;
+}
+
+.address-book-empty span {
+  color: var(--warm-gray);
+  font-size: 0.92rem;
+  line-height: 1.6;
+}
+
+.address-card {
+  border: 1px solid var(--border-light);
+  border-radius: 4px;
+  padding: 18px;
+  background: #fff;
+}
+
+.address-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 14px;
+  margin-bottom: 12px;
+}
+
+.address-card-title-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.address-card-label-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.address-card-label {
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+
+.address-primary-badge {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(215, 187, 114, 0.14);
+  border: 1px solid rgba(176, 138, 42, 0.22);
+  color: #8c6a16;
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.address-card-recipient {
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  color: var(--charcoal);
+  line-height: 1.25;
+}
+
+.address-card-phone {
+  font-size: 0.9rem;
+  color: var(--warm-gray);
+}
+
+.address-card-body {
+  color: var(--charcoal-soft);
+  line-height: 1.7;
+  font-size: 0.95rem;
+  white-space: pre-line;
+}
+
+.address-card-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+
+.address-card-actions .btn-outline,
+.address-card-actions .btn-text {
+  padding: 9px 14px;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.address-card-actions .btn-text {
+  border-bottom: none;
+  border: 1px solid var(--border-light);
+  border-radius: 4px;
+  color: var(--warm-gray);
+}
+
+.address-form-panel {
+  margin-top: 16px;
+}
+
+.address-primary-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--charcoal-soft);
+  font-size: 0.92rem;
+}
+
+.address-primary-toggle input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+}
+
 .password-copy {
   font-size: 0.95rem;
   color: var(--warm-gray);
@@ -741,6 +1014,34 @@
 @media (max-width: 768px) {
   .horizontal-scroll-container > .product-card {
     flex: 0 0 85%; /* Shows 1 card and a sliver of the next on mobile */
+  }
+
+  .info-block-heading {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .account-section-toggle {
+    align-items: flex-start;
+  }
+
+  .account-section-toggle-summary {
+    font-size: 0.92rem;
+  }
+
+  .inline-edit-actions {
+    flex-direction: column;
+  }
+
+  .inline-edit-actions .btn-primary,
+  .inline-edit-actions .btn-outline {
+    width: 100%;
+  }
+
+  .address-card-header,
+  .address-card-actions {
+    flex-direction: column;
+    align-items: flex-start;
   }
 
   .wishlist-meta-row {

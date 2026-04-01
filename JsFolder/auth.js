@@ -18,8 +18,73 @@ const Auth = {
     if (!user) return null;
     return {
       ...user,
-      wishlist: Array.isArray(user.wishlist) ? [...user.wishlist] : []
+      wishlist: Array.isArray(user.wishlist) ? [...user.wishlist] : [],
+      addressBook: Array.isArray(user.addressBook)
+        ? user.addressBook.map(entry => ({ ...entry }))
+        : []
     };
+  },
+
+  normalizeAddressBook(rawAddressBook, fullName = '', fallbackAddress = '') {
+    let entries = [];
+
+    if (Array.isArray(rawAddressBook)) {
+      entries = rawAddressBook;
+    } else if (typeof rawAddressBook === 'string' && rawAddressBook.trim()) {
+      try {
+        const parsed = JSON.parse(rawAddressBook);
+        if (Array.isArray(parsed)) entries = parsed;
+      } catch (_error) {
+        entries = [];
+      }
+    }
+
+    const normalized = entries
+      .map((entry, index) => {
+        if (!entry || typeof entry !== 'object') return null;
+        const address = String(entry.address || '').trim();
+        if (!address) return null;
+
+        return {
+          id: String(entry.id || `addr-${index + 1}`),
+          label: String(entry.label || 'Address').trim() || 'Address',
+          recipient: String(entry.recipient || fullName || '').trim(),
+          phone: String(entry.phone || '').trim(),
+          address,
+          isPrimary: Boolean(entry.isPrimary ?? entry.is_primary)
+        };
+      })
+      .filter(Boolean);
+
+    if (!normalized.length && String(fallbackAddress || '').trim()) {
+      normalized.push({
+        id: 'primary-address',
+        label: 'Primary',
+        recipient: String(fullName || '').trim(),
+        phone: '',
+        address: String(fallbackAddress).trim(),
+        isPrimary: true
+      });
+    }
+
+    if (normalized.length > 0 && !normalized.some(entry => entry.isPrimary)) {
+      normalized[0].isPrimary = true;
+    }
+
+    return normalized.map((entry, index) => ({
+      ...entry,
+      isPrimary: index === normalized.findIndex(candidate => candidate.isPrimary)
+    }));
+  },
+
+  getPrimaryAddressEntry(addressBook) {
+    if (!Array.isArray(addressBook) || addressBook.length === 0) return null;
+    return addressBook.find(entry => entry.isPrimary) || addressBook[0] || null;
+  },
+
+  hasMissingColumnError(error, columnName) {
+    const message = String(error && error.message ? error.message : '').toLowerCase();
+    return message.includes(String(columnName || '').toLowerCase()) && message.includes('column');
   },
 
   validatePassword(password) {
@@ -41,14 +106,22 @@ const Auth = {
         ? authUser.user_metadata.full_name
         : (authUser.email || 'Guest').split('@')[0];
 
+    const addressBook = this.normalizeAddressBook(
+      profile && profile.address_book,
+      fullName,
+      profile && profile.address ? profile.address : ''
+    );
+    const primaryAddress = this.getPrimaryAddressEntry(addressBook);
+
     return {
       id: authUser.id,
       name: fullName,
       email: authUser.email || '',
       role: profile && profile.role ? profile.role : 'customer',
-      address: profile && profile.address ? profile.address : '',
+      address: primaryAddress ? primaryAddress.address : '',
       avatar: profile && profile.avatar_url ? profile.avatar_url : '',
       wishlist: [],
+      addressBook,
       createdAt: profile && profile.created_at ? profile.created_at : authUser.created_at
     };
   },
@@ -57,11 +130,22 @@ const Auth = {
     const client = this.getClient();
     if (!client) return null;
 
-    const { data, error } = await client
+    let { data, error } = await client
       .from('profiles')
-      .select('id, full_name, avatar_url, address, role, created_at, updated_at')
+      .select('id, full_name, avatar_url, address, address_book, role, created_at, updated_at')
       .eq('id', userId)
       .limit(1);
+
+    if (error && this.hasMissingColumnError(error, 'address_book')) {
+      const fallback = await client
+        .from('profiles')
+        .select('id, full_name, avatar_url, address, role, created_at, updated_at')
+        .eq('id', userId)
+        .limit(1);
+
+      data = fallback.data;
+      error = fallback.error;
+    }
 
     if (error) {
       console.error('Failed to fetch profile.', error);
@@ -407,8 +491,28 @@ const Auth = {
     const profileUpdates = {};
 
     if (typeof updates.name === 'string') profileUpdates.full_name = updates.name.trim();
-    if (typeof updates.address === 'string') profileUpdates.address = updates.address;
     if (typeof updates.avatar === 'string') profileUpdates.avatar_url = updates.avatar;
+
+    if (Array.isArray(updates.addressBook)) {
+      const normalizedAddressBook = this.normalizeAddressBook(
+        updates.addressBook,
+        typeof updates.name === 'string' ? updates.name.trim() : currentUser.name,
+        typeof updates.address === 'string' ? updates.address : currentUser.address
+      );
+      const primaryAddress = this.getPrimaryAddressEntry(normalizedAddressBook);
+
+      profileUpdates.address_book = normalizedAddressBook.map(entry => ({
+        id: entry.id,
+        label: entry.label,
+        recipient: entry.recipient,
+        phone: entry.phone,
+        address: entry.address,
+        is_primary: entry.isPrimary
+      }));
+      profileUpdates.address = primaryAddress ? primaryAddress.address : '';
+    } else if (typeof updates.address === 'string') {
+      profileUpdates.address = updates.address;
+    }
 
     if (Object.keys(profileUpdates).length > 0) {
       const { error } = await client

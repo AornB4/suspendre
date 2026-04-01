@@ -13,58 +13,289 @@ document.addEventListener('DOMContentLoaded', async () => {
     return;
   }
 
-  const user = Auth.getCurrentUser();
-  
-  // Bind Profile Data
-  const firstName = user.name ? user.name.split(' ')[0] : 'Guest';
-  document.getElementById('welcomeMessage').textContent = `Welcome back, ${firstName}.`;
-  document.getElementById('profileName').textContent = user.name || 'Guest User';
-  document.getElementById('profileEmail').textContent = user.email || 'guest@suspendre.com';
+  let user = Auth.getCurrentUser();
+  let editingAddressId = null;
 
-  // Address Logic
-  const addressDisplay = document.getElementById('addressDisplay');
-  const addressEdit = document.getElementById('addressEdit');
-  const profileAddress = document.getElementById('profileAddress');
+  const welcomeMessage = document.getElementById('welcomeMessage');
+  const profileNameEl = document.getElementById('profileName');
+  const profileEmailEl = document.getElementById('profileEmail');
+  const profileNameDisplay = document.getElementById('profileNameDisplay');
+  const profileNameEdit = document.getElementById('profileNameEdit');
+  const profileNameInput = document.getElementById('profileNameInput');
+  const addressBookContainer = document.getElementById('addressBookContainer');
+  const addressBookEmpty = document.getElementById('addressBookEmpty');
+  const addressBookToggle = document.getElementById('addressBookToggle');
+  const addressBookSummary = document.getElementById('addressBookSummary');
+  const addressBookSectionContent = document.getElementById('addressBookSectionContent');
+  const addressFormPanel = document.getElementById('addressFormPanel');
+  const addressLabelInput = document.getElementById('addressLabelInput');
+  const addressRecipientInput = document.getElementById('addressRecipientInput');
+  const addressPhoneInput = document.getElementById('addressPhoneInput');
   const addressInput = document.getElementById('addressInput');
+  const addressPrimaryInput = document.getElementById('addressPrimaryInput');
+  const passwordSectionToggle = document.getElementById('passwordSectionToggle');
+  const passwordSectionContent = document.getElementById('passwordSectionContent');
 
-  function renderAddress() {
-    const currentUser = Auth.getCurrentUser();
-    if (currentUser && currentUser.address) {
-      profileAddress.innerHTML = currentUser.address.replace(/\n/g, '<br>');
-      profileAddress.style.fontStyle = 'normal';
-      profileAddress.style.color = 'var(--charcoal)';
+  function setCollapsibleState(toggle, content, expanded) {
+    if (!toggle || !content) return;
+    const wrapper = toggle.closest('.account-collapsible');
+    toggle.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+    if (expanded) {
+      content.removeAttribute('hidden');
+      wrapper?.classList.add('open');
     } else {
-      profileAddress.innerHTML = 'No shipping address set.';
-      profileAddress.style.fontStyle = 'italic';
-      profileAddress.style.color = 'var(--warm-gray)';
+      content.setAttribute('hidden', '');
+      wrapper?.classList.remove('open');
     }
   }
 
-  renderAddress();
+  function toggleCollapsible(toggle, content) {
+    const isExpanded = toggle?.getAttribute('aria-expanded') === 'true';
+    setCollapsibleState(toggle, content, !isExpanded);
+  }
 
-  document.getElementById('editAddressBtn').addEventListener('click', () => {
-    const currentUser = Auth.getCurrentUser();
-    addressInput.value = currentUser.address || '';
-    addressDisplay.style.display = 'none';
-    addressEdit.style.display = 'block';
-  });
+  function refreshUser() {
+    user = Auth.getCurrentUser();
+    return user;
+  }
 
-  document.getElementById('cancelAddressBtn').addEventListener('click', () => {
-    addressEdit.style.display = 'none';
-    addressDisplay.style.display = 'block';
-  });
+  function getSafeAddressBook() {
+    const currentUser = refreshUser();
+    return Array.isArray(currentUser?.addressBook)
+      ? currentUser.addressBook.map(entry => ({ ...entry }))
+      : [];
+  }
 
-  document.getElementById('saveAddressBtn').addEventListener('click', async () => {
-    const newAddress = addressInput.value.trim();
-    const res = await Auth.updateUser(user.id, { address: newAddress });
-    if (res.success) {
-      renderAddress();
-      addressEdit.style.display = 'none';
-      addressDisplay.style.display = 'block';
-      showToast('Shipping address updated successfully.', 'success');
-    } else {
-      showToast('Failed to update address.', 'error');
+  function normalizeAddressEntries(entries, preferredPrimaryId = null) {
+    const cleaned = (Array.isArray(entries) ? entries : [])
+      .map((entry, index) => {
+        if (!entry) return null;
+        const address = String(entry.address || '').trim();
+        if (!address) return null;
+
+        return {
+          id: String(entry.id || `addr-${Date.now()}-${index}`),
+          label: String(entry.label || 'Address').trim() || 'Address',
+          recipient: String(entry.recipient || refreshUser()?.name || '').trim(),
+          phone: String(entry.phone || '').trim(),
+          address,
+          isPrimary: Boolean(entry.isPrimary)
+        };
+      })
+      .filter(Boolean);
+
+    if (!cleaned.length) return [];
+
+    const targetPrimaryId = preferredPrimaryId || (cleaned.find(entry => entry.isPrimary) || cleaned[0]).id;
+    return cleaned.map(entry => ({
+      ...entry,
+      isPrimary: entry.id === targetPrimaryId
+    }));
+  }
+
+  function escapeHtml(value) {
+    return String(value || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function renderProfileHeader() {
+    const currentUser = refreshUser();
+    const firstName = currentUser?.name ? currentUser.name.split(' ')[0] : 'Guest';
+    if (welcomeMessage) welcomeMessage.textContent = `Welcome back, ${firstName}.`;
+    if (profileNameEl) profileNameEl.textContent = currentUser?.name || 'Guest User';
+    if (profileEmailEl) profileEmailEl.textContent = currentUser?.email || 'guest@suspendre.com';
+  }
+
+  function closeProfileEditor() {
+    if (profileNameEdit) profileNameEdit.style.display = 'none';
+    if (profileNameDisplay) profileNameDisplay.style.display = 'block';
+  }
+
+  function openProfileEditor() {
+    const currentUser = refreshUser();
+    if (profileNameInput) profileNameInput.value = currentUser?.name || '';
+    if (profileNameDisplay) profileNameDisplay.style.display = 'none';
+    if (profileNameEdit) profileNameEdit.style.display = 'flex';
+    profileNameInput?.focus();
+  }
+
+  function openAddressForm(addressEntry = null) {
+    const currentUser = refreshUser();
+    editingAddressId = addressEntry ? addressEntry.id : null;
+    if (addressLabelInput) addressLabelInput.value = addressEntry?.label || '';
+    if (addressRecipientInput) addressRecipientInput.value = addressEntry?.recipient || currentUser?.name || '';
+    if (addressPhoneInput) addressPhoneInput.value = addressEntry?.phone || '';
+    if (addressInput) addressInput.value = addressEntry?.address || '';
+    if (addressPrimaryInput) {
+      const hasPrimary = getSafeAddressBook().some(entry => entry.isPrimary);
+      addressPrimaryInput.checked = addressEntry ? !!addressEntry.isPrimary : !hasPrimary;
     }
+    setCollapsibleState(addressBookToggle, addressBookSectionContent, true);
+    if (addressFormPanel) addressFormPanel.style.display = 'flex';
+    addressLabelInput?.focus();
+  }
+
+  function closeAddressForm() {
+    editingAddressId = null;
+    if (addressFormPanel) addressFormPanel.style.display = 'none';
+    if (addressLabelInput) addressLabelInput.value = '';
+    if (addressRecipientInput) addressRecipientInput.value = '';
+    if (addressPhoneInput) addressPhoneInput.value = '';
+    if (addressInput) addressInput.value = '';
+    if (addressPrimaryInput) addressPrimaryInput.checked = false;
+  }
+
+  function renderAddressBook() {
+    if (!addressBookContainer || !addressBookEmpty) return;
+
+    const addressBook = getSafeAddressBook();
+    addressBookContainer.innerHTML = '';
+    addressBookEmpty.style.display = addressBook.length ? 'none' : 'block';
+    if (addressBookSummary) {
+      if (!addressBook.length) {
+        addressBookSummary.textContent = 'No saved destinations yet. Add one when you are ready.';
+      } else {
+        const primary = addressBook.find(entry => entry.isPrimary) || addressBook[0];
+        addressBookSummary.textContent = `${addressBook.length} saved ${addressBook.length === 1 ? 'address' : 'addresses'}, primary set to ${primary?.label || 'Primary'}.`;
+      }
+    }
+
+    addressBook.forEach((entry) => {
+      const card = document.createElement('article');
+      card.className = 'address-card';
+      card.innerHTML = `
+        <div class="address-card-header">
+          <div class="address-card-title-group">
+            <div class="address-card-label-row">
+              <span class="address-card-label">${escapeHtml(entry.label)}</span>
+              ${entry.isPrimary ? '<span class="address-primary-badge">Primary</span>' : ''}
+            </div>
+            <strong class="address-card-recipient">${escapeHtml(entry.recipient || 'Recipient')}</strong>
+            ${entry.phone ? `<span class="address-card-phone">${escapeHtml(entry.phone)}</span>` : ''}
+          </div>
+        </div>
+        <div class="address-card-body">${escapeHtml(entry.address)}</div>
+        <div class="address-card-actions">
+          ${entry.isPrimary ? '' : '<button class="btn-outline address-make-primary">Make Primary</button>'}
+          <button class="btn-outline address-edit">Edit</button>
+          <button class="btn-text address-remove">Remove</button>
+        </div>
+      `;
+
+      const makePrimaryBtn = card.querySelector('.address-make-primary');
+      const editBtn = card.querySelector('.address-edit');
+      const removeBtn = card.querySelector('.address-remove');
+
+      makePrimaryBtn?.addEventListener('click', async () => {
+        const nextBook = normalizeAddressEntries(getSafeAddressBook(), entry.id);
+        const result = await Auth.updateUser(refreshUser().id, { addressBook: nextBook });
+        if (!result.success) {
+          showToast(result.message || 'Could not make that address primary.', 'error');
+          return;
+        }
+
+        renderProfileHeader();
+        renderAddressBook();
+        showToast(`${entry.label} is now your primary address.`, 'success');
+      });
+
+      editBtn?.addEventListener('click', () => openAddressForm(entry));
+
+      removeBtn?.addEventListener('click', async () => {
+        const existing = getSafeAddressBook();
+        const filtered = existing.filter(addressEntry => addressEntry.id !== entry.id);
+        const nextPrimaryId = entry.isPrimary && filtered.length ? filtered[0].id : null;
+        const nextBook = normalizeAddressEntries(filtered, nextPrimaryId);
+        const result = await Auth.updateUser(refreshUser().id, { addressBook: nextBook });
+        if (!result.success) {
+          showToast(result.message || 'Could not remove that address.', 'error');
+          return;
+        }
+
+        renderProfileHeader();
+        renderAddressBook();
+        showToast(`${entry.label} removed from your address book.`, 'success');
+      });
+
+      addressBookContainer.appendChild(card);
+    });
+  }
+
+  renderProfileHeader();
+  renderAddressBook();
+  setCollapsibleState(addressBookToggle, addressBookSectionContent, false);
+  setCollapsibleState(passwordSectionToggle, passwordSectionContent, false);
+
+  addressBookToggle?.addEventListener('click', () => toggleCollapsible(addressBookToggle, addressBookSectionContent));
+  passwordSectionToggle?.addEventListener('click', () => toggleCollapsible(passwordSectionToggle, passwordSectionContent));
+
+  document.getElementById('editProfileBtn')?.addEventListener('click', openProfileEditor);
+  document.getElementById('cancelProfileBtn')?.addEventListener('click', closeProfileEditor);
+  document.getElementById('saveProfileBtn')?.addEventListener('click', async () => {
+    const fullName = String(profileNameInput?.value || '').trim();
+    if (!fullName) {
+      showToast('Please enter your full name.', 'error');
+      return;
+    }
+
+    const result = await Auth.updateUser(refreshUser().id, { name: fullName });
+    if (!result.success) {
+      showToast(result.message || 'Could not update your profile.', 'error');
+      return;
+    }
+
+    renderProfileHeader();
+    renderAddressBook();
+    renderAvatar();
+    closeProfileEditor();
+    showToast('Profile details updated successfully.', 'success');
+  });
+
+  document.getElementById('addAddressBtn')?.addEventListener('click', () => openAddressForm());
+  document.getElementById('cancelAddressBtn')?.addEventListener('click', closeAddressForm);
+  document.getElementById('saveAddressBtn')?.addEventListener('click', async () => {
+    const label = String(addressLabelInput?.value || '').trim();
+    const recipient = String(addressRecipientInput?.value || '').trim();
+    const phone = String(addressPhoneInput?.value || '').trim();
+    const address = String(addressInput?.value || '').trim();
+    const shouldBePrimary = !!addressPrimaryInput?.checked;
+    const isEditingAddress = !!editingAddressId;
+
+    if (!label || !recipient || !address) {
+      showToast('Please complete the label, recipient, and address fields.', 'error');
+      return;
+    }
+
+    const existing = getSafeAddressBook();
+    const draftEntry = {
+      id: editingAddressId || `addr-${Date.now()}`,
+      label,
+      recipient,
+      phone,
+      address,
+      isPrimary: shouldBePrimary
+    };
+
+    const otherEntries = existing.filter(entry => entry.id !== draftEntry.id);
+    const nextEntries = normalizeAddressEntries(
+      [...otherEntries, draftEntry],
+      shouldBePrimary ? draftEntry.id : ((otherEntries.find(entry => entry.isPrimary) || draftEntry).id)
+    );
+    const result = await Auth.updateUser(refreshUser().id, { addressBook: nextEntries });
+
+    if (!result.success) {
+      showToast(result.message || 'Could not save that address.', 'error');
+      return;
+    }
+
+    renderProfileHeader();
+    renderAddressBook();
+    closeAddressForm();
+    showToast(isEditingAddress ? 'Address updated successfully.' : 'Address added to your book.', 'success');
   });
 
   // Avatar Logic
@@ -81,7 +312,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     } else {
       avatarPreview.style.display = 'none';
       avatarInitial.style.display = 'block';
-      avatarInitial.textContent = (user.name ? user.name.charAt(0).toUpperCase() : 'U');
+      avatarInitial.textContent = (currentUser?.name ? currentUser.name.charAt(0).toUpperCase() : 'U');
     }
   }
   
@@ -118,7 +349,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
         
-        const res = await Auth.updateUser(user.id, { avatar: dataUrl });
+        const res = await Auth.updateUser(refreshUser().id, { avatar: dataUrl });
         if (res.success) {
           renderAvatar();
           
@@ -196,6 +427,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   confirmPasswordInput?.addEventListener('input', validatePasswordMatch);
 
   savePasswordBtn?.addEventListener('click', async () => {
+    setCollapsibleState(passwordSectionToggle, passwordSectionContent, true);
     const newPassword = newPasswordInput ? newPasswordInput.value : '';
     const confirmPassword = confirmPasswordInput ? confirmPasswordInput.value : '';
 
@@ -232,7 +464,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   renderPasswordRequirements();
 
-  await renderOrderHistory(user.id);
+  await renderOrderHistory(refreshUser().id);
   await renderWishlist();
 });
 
