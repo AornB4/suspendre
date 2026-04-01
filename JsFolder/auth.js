@@ -21,7 +21,34 @@ const Auth = {
       wishlist: Array.isArray(user.wishlist) ? [...user.wishlist] : [],
       addressBook: Array.isArray(user.addressBook)
         ? user.addressBook.map(entry => ({ ...entry }))
-        : []
+        : [],
+      preferences: user.preferences ? { ...user.preferences } : {
+        preferredMaterial: '',
+        wardrobeFocus: '',
+        conciergePersonalization: true
+      }
+    };
+  },
+
+  normalizePreferences(rawPreferences) {
+    let preferences = rawPreferences;
+
+    if (typeof preferences === 'string' && preferences.trim()) {
+      try {
+        preferences = JSON.parse(preferences);
+      } catch (_error) {
+        preferences = null;
+      }
+    }
+
+    if (!preferences || typeof preferences !== 'object' || Array.isArray(preferences)) {
+      preferences = {};
+    }
+
+    return {
+      preferredMaterial: String(preferences.preferredMaterial || preferences.preferred_material || '').trim(),
+      wardrobeFocus: String(preferences.wardrobeFocus || preferences.wardrobe_focus || '').trim(),
+      conciergePersonalization: preferences.conciergePersonalization ?? preferences.concierge_personalization ?? true
     };
   },
 
@@ -112,6 +139,7 @@ const Auth = {
       profile && profile.address ? profile.address : ''
     );
     const primaryAddress = this.getPrimaryAddressEntry(addressBook);
+    const preferences = this.normalizePreferences(profile && profile.preferences);
 
     return {
       id: authUser.id,
@@ -122,6 +150,7 @@ const Auth = {
       avatar: profile && profile.avatar_url ? profile.avatar_url : '',
       wishlist: [],
       addressBook,
+      preferences,
       createdAt: profile && profile.created_at ? profile.created_at : authUser.created_at
     };
   },
@@ -132,11 +161,14 @@ const Auth = {
 
     let { data, error } = await client
       .from('profiles')
-      .select('id, full_name, avatar_url, address, address_book, role, created_at, updated_at')
+      .select('id, full_name, avatar_url, address, address_book, preferences, role, created_at, updated_at')
       .eq('id', userId)
       .limit(1);
 
-    if (error && this.hasMissingColumnError(error, 'address_book')) {
+    if (
+      error &&
+      (this.hasMissingColumnError(error, 'address_book') || this.hasMissingColumnError(error, 'preferences'))
+    ) {
       const fallback = await client
         .from('profiles')
         .select('id, full_name, avatar_url, address, role, created_at, updated_at')
@@ -514,11 +546,29 @@ const Auth = {
       profileUpdates.address = updates.address;
     }
 
+    if (updates.preferences && typeof updates.preferences === 'object' && !Array.isArray(updates.preferences)) {
+      const normalizedPreferences = this.normalizePreferences(updates.preferences);
+      profileUpdates.preferences = {
+        preferred_material: normalizedPreferences.preferredMaterial,
+        wardrobe_focus: normalizedPreferences.wardrobeFocus,
+        concierge_personalization: !!normalizedPreferences.conciergePersonalization
+      };
+    }
+
     if (Object.keys(profileUpdates).length > 0) {
-      const { error } = await client
+      let { error } = await client
         .from('profiles')
         .update(profileUpdates)
         .eq('id', userId);
+
+      if (error && this.hasMissingColumnError(error, 'preferences')) {
+        delete profileUpdates.preferences;
+        const fallbackUpdate = await client
+          .from('profiles')
+          .update(profileUpdates)
+          .eq('id', userId);
+        error = fallbackUpdate.error;
+      }
 
       if (error) {
         return {

@@ -49,6 +49,79 @@
       <p id="welcomeMessage">Welcome back.</p>
     </header>
 
+    <section class="account-overview-card">
+      <div class="account-overview-heading">
+        <div>
+          <span class="account-overview-kicker">At a Glance</span>
+          <h2>Client Summary</h2>
+        </div>
+        <div class="account-overview-actions">
+          <a href="shop.html" class="btn-outline account-overview-btn">
+            <span class="account-overview-btn-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="14" height="14">
+                <path d="M6 8h12l-1 12H7L6 8Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"></path>
+                <path d="M9 8a3 3 0 0 1 6 0" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path>
+              </svg>
+            </span>
+            <span>Continue Shopping</span>
+          </a>
+          <a href="#wishlistContainer" class="btn-outline account-overview-btn">
+            <span class="account-overview-btn-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="14" height="14">
+                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"></path>
+              </svg>
+            </span>
+            <span>Open Wishlist</span>
+          </a>
+        </div>
+      </div>
+      <div class="account-overview-grid" id="accountOverviewGrid">
+        <article class="account-overview-item">
+          <span class="account-overview-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="16" height="16">
+              <path d="M6 8h12l-1 12H7L6 8Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"></path>
+              <path d="M9 8a3 3 0 0 1 6 0" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path>
+            </svg>
+          </span>
+          <span class="account-overview-label">Orders Placed</span>
+          <strong id="overviewOrdersCount">0</strong>
+          <p id="overviewOrdersCopy">Your purchase history will appear here.</p>
+        </article>
+        <article class="account-overview-item">
+          <span class="account-overview-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="16" height="16">
+              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"></path>
+            </svg>
+          </span>
+          <span class="account-overview-label">Saved Pieces</span>
+          <strong id="overviewWishlistCount">0</strong>
+          <p id="overviewWishlistCopy">Pieces you are still considering.</p>
+        </article>
+        <article class="account-overview-item">
+          <span class="account-overview-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="16" height="16">
+              <path d="M12 21s7-5.7 7-11a7 7 0 1 0-14 0c0 5.3 7 11 7 11Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"></path>
+              <circle cx="12" cy="10" r="2.5" fill="none" stroke="currentColor" stroke-width="1.8"></circle>
+            </svg>
+          </span>
+          <span class="account-overview-label">Saved Addresses</span>
+          <strong id="overviewAddressCount">0</strong>
+          <p id="overviewAddressCopy">Primary shipping profile not set yet.</p>
+        </article>
+        <article class="account-overview-item">
+          <span class="account-overview-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="16" height="16">
+              <path d="M7 3h10a2 2 0 0 1 2 2v15l-2-1-2 1-2-1-2 1-2-1-2 1V5a2 2 0 0 1 2-2Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"></path>
+              <path d="M9 8h6M9 12h6M9 16h4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path>
+            </svg>
+          </span>
+          <span class="account-overview-label">Latest Order Status</span>
+          <strong id="overviewLatestStatus">No Orders Yet</strong>
+          <p id="overviewLatestStatusCopy">Place a first order to begin your Suspendre history.</p>
+        </article>
+      </div>
+    </section>
+
     <div class="account-grid">
       <!-- Profile Info -->
       <section class="account-card">
@@ -147,10 +220,61 @@
             </div>
           </div>
         </div>
+        <div class="info-block preferences-block account-collapsible">
+          <button id="preferencesSectionToggle" class="account-section-toggle" type="button" aria-expanded="false">
+            <span class="account-section-toggle-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="16" height="16">
+                <path d="M12 4v16M4 12h16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path>
+                <circle cx="12" cy="12" r="7" fill="none" stroke="currentColor" stroke-width="1.8"></circle>
+              </svg>
+            </span>
+            <span class="account-section-toggle-copy">
+              <span class="account-section-toggle-label">Preferences</span>
+              <span id="preferencesSummary" class="account-section-toggle-summary">Shape recommendations around your wardrobe priorities.</span>
+            </span>
+            <span class="account-section-toggle-chevron" aria-hidden="true">+</span>
+          </button>
+          <div id="preferencesSectionContent" class="account-collapsible-content" hidden>
+            <p class="preferences-copy">These preferences help Suspendre and Atelier surface a more tailored selection when you return.</p>
+            <div class="preferences-form">
+              <div class="preferences-field">
+                <label for="preferredMaterialSelect">Preferred Material</label>
+                <select id="preferredMaterialSelect">
+                  <option value="">No preference</option>
+                  <option value="wood">Wood</option>
+                  <option value="metal">Metal</option>
+                  <option value="velvet">Velvet</option>
+                  <option value="gold">Gold</option>
+                </select>
+              </div>
+              <div class="preferences-field">
+                <label for="wardrobeFocusSelect">Wardrobe Focus</label>
+                <select id="wardrobeFocusSelect">
+                  <option value="">Select a focus</option>
+                  <option value="tailoring">Tailoring & coats</option>
+                  <option value="delicates">Delicate garments</option>
+                  <option value="daily">Daily wardrobe rotation</option>
+                  <option value="display">Display & presentation</option>
+                </select>
+              </div>
+              <label class="preferences-check">
+                <input type="checkbox" id="conciergePersonalizationInput" />
+                <span>Let Atelier tailor suggestions around these preferences.</span>
+              </label>
+              <button id="savePreferencesBtn" class="btn-primary" type="button" style="padding:8px 16px; font-size:14px; align-self:flex-start;">Save Preferences</button>
+            </div>
+          </div>
+        </div>
       </section>
 
       <!-- Right Column: Orders & Wishlist -->
       <div class="account-right-col" style="display:flex; flex-direction:column; gap:48px;">
+        <section class="account-card recent-activity-card">
+          <h2>Recent Activity</h2>
+          <div id="recentActivityContainer" class="recent-activity-list">
+            <div class="loading-state" style="text-align:center; padding:28px 0;">Compiling your recent account activity...</div>
+          </div>
+        </section>
         <!-- Order History -->
         <section class="account-card order-history-card">
           <h2>Order History</h2>

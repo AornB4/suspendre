@@ -35,6 +35,23 @@ document.addEventListener('DOMContentLoaded', async () => {
   const addressPrimaryInput = document.getElementById('addressPrimaryInput');
   const passwordSectionToggle = document.getElementById('passwordSectionToggle');
   const passwordSectionContent = document.getElementById('passwordSectionContent');
+  const preferencesSectionToggle = document.getElementById('preferencesSectionToggle');
+  const preferencesSectionContent = document.getElementById('preferencesSectionContent');
+  const preferencesSummary = document.getElementById('preferencesSummary');
+  const preferredMaterialSelect = document.getElementById('preferredMaterialSelect');
+  const wardrobeFocusSelect = document.getElementById('wardrobeFocusSelect');
+  const conciergePersonalizationInput = document.getElementById('conciergePersonalizationInput');
+  const savePreferencesBtn = document.getElementById('savePreferencesBtn');
+  const recentActivityContainer = document.getElementById('recentActivityContainer');
+
+  const overviewOrdersCount = document.getElementById('overviewOrdersCount');
+  const overviewOrdersCopy = document.getElementById('overviewOrdersCopy');
+  const overviewWishlistCount = document.getElementById('overviewWishlistCount');
+  const overviewWishlistCopy = document.getElementById('overviewWishlistCopy');
+  const overviewAddressCount = document.getElementById('overviewAddressCount');
+  const overviewAddressCopy = document.getElementById('overviewAddressCopy');
+  const overviewLatestStatus = document.getElementById('overviewLatestStatus');
+  const overviewLatestStatusCopy = document.getElementById('overviewLatestStatusCopy');
 
   function setCollapsibleState(toggle, content, expanded) {
     if (!toggle || !content) return;
@@ -59,11 +76,26 @@ document.addEventListener('DOMContentLoaded', async () => {
     return user;
   }
 
+  function getAccountOrders() {
+    return Orders.getAll()
+      .filter(order => order.userId === refreshUser()?.id)
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  }
+
   function getSafeAddressBook() {
     const currentUser = refreshUser();
     return Array.isArray(currentUser?.addressBook)
       ? currentUser.addressBook.map(entry => ({ ...entry }))
       : [];
+  }
+
+  function getSafePreferences() {
+    const currentUser = refreshUser();
+    return {
+      preferredMaterial: currentUser?.preferences?.preferredMaterial || '',
+      wardrobeFocus: currentUser?.preferences?.wardrobeFocus || '',
+      conciergePersonalization: currentUser?.preferences?.conciergePersonalization ?? true
+    };
   }
 
   function normalizeAddressEntries(entries, preferredPrimaryId = null) {
@@ -109,6 +141,189 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (profileNameEl) profileNameEl.textContent = currentUser?.name || 'Guest User';
     if (profileEmailEl) profileEmailEl.textContent = currentUser?.email || 'guest@suspendre.com';
   }
+
+  function formatPreferenceLabel(value, fallback = 'Not set yet') {
+    const raw = String(value || '').trim();
+    if (!raw) return fallback;
+    return raw
+      .replace(/[_-]+/g, ' ')
+      .split(' ')
+      .filter(Boolean)
+      .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(' ');
+  }
+
+  function renderPreferencesSummary() {
+    const preferences = getSafePreferences();
+    if (preferredMaterialSelect) preferredMaterialSelect.value = preferences.preferredMaterial;
+    if (wardrobeFocusSelect) wardrobeFocusSelect.value = preferences.wardrobeFocus;
+    if (conciergePersonalizationInput) {
+      conciergePersonalizationInput.checked = !!preferences.conciergePersonalization;
+    }
+
+    if (preferencesSummary) {
+      const summaryParts = [];
+      if (preferences.preferredMaterial) summaryParts.push(`Material: ${formatPreferenceLabel(preferences.preferredMaterial)}`);
+      if (preferences.wardrobeFocus) summaryParts.push(`Focus: ${formatPreferenceLabel(preferences.wardrobeFocus)}`);
+      if (!summaryParts.length) {
+        preferencesSummary.textContent = 'Shape recommendations around your wardrobe priorities.';
+      } else {
+        preferencesSummary.textContent = summaryParts.join(' • ');
+      }
+    }
+  }
+
+  async function buildDashboardContext() {
+    const currentUser = refreshUser();
+    const orders = getAccountOrders();
+    const wishlistIds = await Auth.getWishlistIds();
+    const wishlistProducts = wishlistIds
+      .map(id => ProductData.getById(id))
+      .filter(Boolean);
+    const addressBook = getSafeAddressBook();
+    const restockIds = await RestockRequests.getRequestedIds();
+
+    return {
+      user: currentUser,
+      orders,
+      wishlistProducts,
+      addressBook,
+      restockIds
+    };
+  }
+
+  function renderAccountOverview(context) {
+    if (!context) return;
+
+    const latestOrder = context.orders[0] || null;
+    const primaryAddress = context.addressBook.find(entry => entry.isPrimary) || context.addressBook[0] || null;
+    const latestStatus = latestOrder ? getOrderStatusMeta(latestOrder.status).label : 'No Orders Yet';
+
+    if (overviewOrdersCount) overviewOrdersCount.textContent = String(context.orders.length);
+    if (overviewOrdersCopy) {
+      overviewOrdersCopy.textContent = latestOrder
+        ? `Latest order placed ${formatDate(latestOrder.createdAt)}.`
+        : 'Your purchase history will appear here.';
+    }
+
+    if (overviewWishlistCount) overviewWishlistCount.textContent = String(context.wishlistProducts.length);
+    if (overviewWishlistCopy) {
+      overviewWishlistCopy.textContent = context.wishlistProducts.length
+        ? `${context.wishlistProducts.length} saved piece${context.wishlistProducts.length === 1 ? '' : 's'} waiting in your shortlist.`
+        : 'Pieces you are still considering.';
+    }
+
+    if (overviewAddressCount) overviewAddressCount.textContent = String(context.addressBook.length);
+    if (overviewAddressCopy) {
+      overviewAddressCopy.textContent = primaryAddress
+        ? `Primary delivery profile: ${primaryAddress.label}.`
+        : 'Primary shipping profile not set yet.';
+    }
+
+    if (overviewLatestStatus) overviewLatestStatus.textContent = latestStatus;
+    if (overviewLatestStatusCopy) {
+      overviewLatestStatusCopy.textContent = latestOrder
+        ? `${latestOrder.items.length} line item${latestOrder.items.length === 1 ? '' : 's'} in your latest order.`
+        : 'Place a first order to begin your Suspendre history.';
+    }
+  }
+
+  function getActivityIcon(name) {
+    const icons = {
+      order: `
+        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+          <path d="M6 8h12l-1 12H7L6 8Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"></path>
+          <path d="M9 8a3 3 0 0 1 6 0" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path>
+        </svg>
+      `,
+      wishlist: `
+        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+          <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"></path>
+        </svg>
+      `,
+      address: `
+        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+          <path d="M12 21s7-5.7 7-11a7 7 0 1 0-14 0c0 5.3 7 11 7 11Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"></path>
+          <circle cx="12" cy="10" r="2.5" fill="none" stroke="currentColor" stroke-width="1.8"></circle>
+        </svg>
+      `,
+      alert: `
+        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+          <path d="M12 3a5 5 0 0 1 5 5v2.5l1.5 2.5H5.5L7 10.5V8a5 5 0 0 1 5-5Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"></path>
+          <path d="M10 18a2 2 0 0 0 4 0" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path>
+        </svg>
+      `
+    };
+
+    return icons[name] || icons.order;
+  }
+
+  function renderRecentActivity(context) {
+    if (!recentActivityContainer) return;
+
+    const latestOrder = context.orders[0] || null;
+    const primaryAddress = context.addressBook.find(entry => entry.isPrimary) || context.addressBook[0] || null;
+    const activities = [];
+
+    if (latestOrder) {
+      activities.push({
+        icon: 'order',
+        kicker: 'Latest Order',
+        title: latestOrder.items[0]?.name || 'Recent purchase',
+        meta: `${getOrderStatusMeta(latestOrder.status).label} • ${formatDate(latestOrder.createdAt)}`
+      });
+    }
+
+    activities.push({
+      icon: 'wishlist',
+      kicker: 'Wishlist',
+      title: context.wishlistProducts.length
+        ? `${context.wishlistProducts.length} saved piece${context.wishlistProducts.length === 1 ? '' : 's'}`
+        : 'Wishlist still empty',
+      meta: context.wishlistProducts.length
+        ? `${context.wishlistProducts[0].name} is currently at the top of your shortlist.`
+        : 'Save pieces you want to revisit later.'
+    });
+
+    activities.push({
+      icon: 'address',
+      kicker: 'Primary Address',
+      title: primaryAddress ? primaryAddress.label : 'Not set yet',
+      meta: primaryAddress
+        ? `${primaryAddress.recipient || context.user?.name || 'Recipient'} • ${primaryAddress.address.split('\n')[0]}`
+        : 'Add a delivery destination for faster checkout.'
+    });
+
+    activities.push({
+      icon: 'alert',
+      kicker: 'Restock Alerts',
+      title: `${context.restockIds.length} active alert${context.restockIds.length === 1 ? '' : 's'}`,
+      meta: context.restockIds.length
+        ? 'We are holding your interest on sold-out pieces in the background.'
+        : 'No back-in-stock requests are active right now.'
+    });
+
+    recentActivityContainer.innerHTML = activities.map(activity => `
+      <article class="activity-item">
+        <span class="activity-icon">${getActivityIcon(activity.icon)}</span>
+        <div class="activity-copy">
+          <span class="activity-kicker">${activity.kicker}</span>
+          <div class="activity-title">${escapeHtml(activity.title)}</div>
+          <div class="activity-meta">${escapeHtml(activity.meta)}</div>
+        </div>
+      </article>
+    `).join('');
+  }
+
+  async function refreshDashboardPanels() {
+    const dashboardContext = await buildDashboardContext();
+    renderAccountOverview(dashboardContext);
+    renderRecentActivity(dashboardContext);
+  }
+
+  window.addEventListener('suspendre:account-data-changed', () => {
+    void refreshDashboardPanels();
+  });
 
   function closeProfileEditor() {
     if (profileNameEdit) profileNameEdit.style.display = 'none';
@@ -200,6 +415,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         renderProfileHeader();
         renderAddressBook();
+        await refreshDashboardPanels();
         showToast(`${entry.label} is now your primary address.`, 'success');
       });
 
@@ -218,6 +434,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         renderProfileHeader();
         renderAddressBook();
+        await refreshDashboardPanels();
         showToast(`${entry.label} removed from your address book.`, 'success');
       });
 
@@ -227,11 +444,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   renderProfileHeader();
   renderAddressBook();
+  renderPreferencesSummary();
   setCollapsibleState(addressBookToggle, addressBookSectionContent, false);
   setCollapsibleState(passwordSectionToggle, passwordSectionContent, false);
+  setCollapsibleState(preferencesSectionToggle, preferencesSectionContent, false);
 
   addressBookToggle?.addEventListener('click', () => toggleCollapsible(addressBookToggle, addressBookSectionContent));
   passwordSectionToggle?.addEventListener('click', () => toggleCollapsible(passwordSectionToggle, passwordSectionContent));
+  preferencesSectionToggle?.addEventListener('click', () => toggleCollapsible(preferencesSectionToggle, preferencesSectionContent));
 
   document.getElementById('editProfileBtn')?.addEventListener('click', openProfileEditor);
   document.getElementById('cancelProfileBtn')?.addEventListener('click', closeProfileEditor);
@@ -250,6 +470,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     renderProfileHeader();
     renderAddressBook();
+    await refreshDashboardPanels();
     renderAvatar();
     closeProfileEditor();
     showToast('Profile details updated successfully.', 'success');
@@ -294,8 +515,28 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     renderProfileHeader();
     renderAddressBook();
+    await refreshDashboardPanels();
     closeAddressForm();
     showToast(isEditingAddress ? 'Address updated successfully.' : 'Address added to your book.', 'success');
+  });
+
+  savePreferencesBtn?.addEventListener('click', async () => {
+    const preferences = {
+      preferredMaterial: preferredMaterialSelect?.value || '',
+      wardrobeFocus: wardrobeFocusSelect?.value || '',
+      conciergePersonalization: !!conciergePersonalizationInput?.checked
+    };
+
+    const result = await Auth.updateUser(refreshUser().id, { preferences });
+    if (!result.success) {
+      showToast(result.message || 'Could not save your preferences.', 'error');
+      return;
+    }
+
+    renderPreferencesSummary();
+    setCollapsibleState(preferencesSectionToggle, preferencesSectionContent, false);
+    await refreshDashboardPanels();
+    showToast('Preferences saved successfully.', 'success');
   });
 
   // Avatar Logic
@@ -466,6 +707,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   await renderOrderHistory(refreshUser().id);
   await renderWishlist();
+  await refreshDashboardPanels();
 });
 
 async function renderWishlist() {
@@ -481,6 +723,17 @@ async function renderWishlist() {
 
   if (countBadge) {
     countBadge.textContent = `${wishlistProducts.length} saved`;
+  }
+
+  const overviewWishlistCountEl = document.getElementById('overviewWishlistCount');
+  const overviewWishlistCopyEl = document.getElementById('overviewWishlistCopy');
+  if (overviewWishlistCountEl) {
+    overviewWishlistCountEl.textContent = String(wishlistProducts.length);
+  }
+  if (overviewWishlistCopyEl) {
+    overviewWishlistCopyEl.textContent = wishlistProducts.length
+      ? `${wishlistProducts.length} saved piece${wishlistProducts.length === 1 ? '' : 's'} waiting in your shortlist.`
+      : 'Pieces you are still considering.';
   }
 
   if (subcopy) {
@@ -501,6 +754,7 @@ async function renderWishlist() {
         </div>
       </div>
     `;
+    window.dispatchEvent(new Event('suspendre:account-data-changed'));
     return;
   }
 
@@ -607,6 +861,8 @@ async function renderWishlist() {
     card.querySelector('.wishlist-card-body')?.appendChild(actionBar);
     container.appendChild(card);
   });
+
+  window.dispatchEvent(new Event('suspendre:account-data-changed'));
 }
 
 async function renderOrderHistory(userId) {
