@@ -295,6 +295,20 @@
   flex: 0 0 calc(50% - 12px); /* Shows exactly 2 cards at a time */
   scroll-snap-align: start;
 }
+
+.wishlist-card-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.wishlist-move-btn,
+.wishlist-remove-btn {
+  flex: 1;
+  padding: 10px 14px;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+}
 .horizontal-scroll-container::-webkit-scrollbar {
   height: 6px;
 }

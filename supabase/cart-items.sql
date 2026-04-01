@@ -3,10 +3,14 @@ create table if not exists public.cart_items (
   user_id uuid not null references public.profiles(id) on delete cascade,
   product_id uuid not null references public.products(id) on delete cascade,
   quantity integer not null default 1 check (quantity > 0),
+  saved_for_later boolean not null default false,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   unique (user_id, product_id)
 );
+
+alter table public.cart_items
+add column if not exists saved_for_later boolean not null default false;
 
 alter table public.cart_items enable row level security;
 

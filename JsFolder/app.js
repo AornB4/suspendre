@@ -7,6 +7,7 @@ const Cart = {
   KEY: 'suspendre_cart',
   OWNER_KEY: 'suspendre_cart_owner',
   GUEST_DIRTY_KEY: 'suspendre_cart_guest_dirty',
+  SYNC_PENDING_KEY: 'suspendre_cart_sync_pending',
   cache: [],
   initialized: false,
   initPromise: null,
@@ -33,13 +34,25 @@ const Cart = {
     localStorage.setItem(this.GUEST_DIRTY_KEY, value ? 'true' : 'false');
   },
 
+  isSyncPending() {
+    return localStorage.getItem(this.SYNC_PENDING_KEY) === 'true';
+  },
+
+  setSyncPending(value) {
+    localStorage.setItem(this.SYNC_PENDING_KEY, value ? 'true' : 'false');
+  },
+
   normalizeItem(item) {
     if (!item || !item.productId) return null;
     const product = ProductData.getById(item.productId);
     if (!product || product.stock <= 0) return null;
 
     const qty = Math.max(1, Math.min(Number(item.qty) || 1, product.stock));
-    return { productId: product.id, qty };
+    return {
+      productId: product.id,
+      qty,
+      savedForLater: !!item.savedForLater
+    };
   },
 
   cloneItems(items) {
@@ -66,6 +79,9 @@ const Cart = {
     } else if ((owner || 'guest') !== 'guest') {
       this.setGuestDirty(false);
     }
+    if (typeof options.syncPending === 'boolean') {
+      this.setSyncPending(options.syncPending);
+    }
     this.updateNavCount();
     window.dispatchEvent(new CustomEvent('suspendre:cart-updated', {
       detail: {
@@ -82,7 +98,7 @@ const Cart = {
 
     const { data, error } = await client
       .from('cart_items')
-      .select('product_id, quantity, created_at')
+      .select('product_id, quantity, saved_for_later, created_at')
       .eq('user_id', userId)
       .order('created_at', { ascending: true });
 
@@ -97,7 +113,8 @@ const Cart = {
         if (!product) return null;
         return this.normalizeItem({
           productId: product.id,
-          qty: item.quantity
+          qty: item.quantity,
+          savedForLater: item.saved_for_later
         });
       })
       .filter(Boolean);
@@ -115,7 +132,8 @@ const Cart = {
         return {
           user_id: userId,
           product_id: product.dbId,
-          quantity: item.qty
+          quantity: item.qty,
+          saved_for_later: !!item.savedForLater
         };
       })
       .filter(Boolean);
@@ -156,11 +174,23 @@ const Cart = {
     [...this.cloneItems(baseItems), ...this.cloneItems(extraItems)].forEach(item => {
       const product = ProductData.getById(item.productId);
       if (!product || product.stock <= 0) return;
-      const existingQty = merged.get(product.id) || 0;
-      merged.set(product.id, Math.min(existingQty + item.qty, product.stock));
+      const existing = merged.get(product.id);
+      if (!existing) {
+        merged.set(product.id, { qty: Math.min(item.qty, product.stock), savedForLater: !!item.savedForLater });
+        return;
+      }
+
+      merged.set(product.id, {
+        qty: Math.min(existing.qty + item.qty, product.stock),
+        savedForLater: existing.savedForLater && !!item.savedForLater
+      });
     });
 
-    return Array.from(merged.entries()).map(([productId, qty]) => ({ productId, qty }));
+    return Array.from(merged.entries()).map(([productId, state]) => ({
+      productId,
+      qty: state.qty,
+      savedForLater: state.savedForLater
+    }));
   },
 
   async init() {
@@ -175,6 +205,15 @@ const Cart = {
       const client = this.getClient();
       const storageOwner = this.getStorageOwner();
       const shouldMergeGuestCart = storageOwner === 'guest' && this.isGuestDirty() && this.cache.length > 0;
+      const shouldRestorePendingLocalCart = !!user && storageOwner === user.id && this.isSyncPending() && this.cache.length > 0;
+
+      if (shouldRestorePendingLocalCart) {
+        await this.replaceRemoteItems(user.id, this.cache);
+        this.activeUserId = user.id;
+        this.initialized = true;
+        this.persistLocal(this.cache, user.id, { guestDirty: false, syncPending: false });
+        return this.getItems();
+      }
 
       if (user && client) {
         const remoteItems = await this.loadRemoteItems(user.id);
@@ -190,7 +229,7 @@ const Cart = {
 
           this.activeUserId = user.id;
           this.initialized = true;
-          this.persistLocal(mergedItems, user.id, { guestDirty: false });
+          this.persistLocal(mergedItems, user.id, { guestDirty: false, syncPending: false });
           return this.getItems();
         }
       }
@@ -242,11 +281,17 @@ const Cart = {
     const client = this.getClient();
     if (!user || !client) return;
 
-    const snapshot = this.getItems();
+    const snapshot = this.getAllItems();
+    this.setSyncPending(true);
     this.syncPromise = this.syncPromise
       .catch(() => undefined)
       .then(async () => {
         await this.replaceRemoteItems(user.id, snapshot);
+        this.setSyncPending(false);
+      })
+      .catch((error) => {
+        this.setSyncPending(true);
+        throw error;
       });
   },
 
@@ -259,6 +304,20 @@ const Cart = {
   },
 
   getItems() {
+    if (!this.initialized && this.cache.length === 0) {
+      this.cache = this.loadLocalItems();
+    }
+    return this.cloneItems(this.cache).filter(item => !item.savedForLater);
+  },
+
+  getSavedItems() {
+    if (!this.initialized && this.cache.length === 0) {
+      this.cache = this.loadLocalItems();
+    }
+    return this.cloneItems(this.cache).filter(item => item.savedForLater);
+  },
+
+  getAllItems() {
     if (!this.initialized && this.cache.length === 0) {
       this.cache = this.loadLocalItems();
     }
@@ -280,13 +339,14 @@ const Cart = {
     const product = ProductData.getById(productId);
     if (!product || product.stock === 0) return false;
 
-    const items = this.getItems();
+    const items = this.getAllItems();
     const existing = items.find(item => item.productId === product.id);
 
     if (existing) {
       existing.qty = Math.min(existing.qty + qty, product.stock);
+      existing.savedForLater = false;
     } else {
-      items.push({ productId: product.id, qty: Math.min(qty, product.stock) });
+      items.push({ productId: product.id, qty: Math.min(qty, product.stock), savedForLater: false });
     }
 
     this.saveItems(items);
@@ -295,8 +355,8 @@ const Cart = {
 
   updateQty(productId, qty) {
     const product = ProductData.getById(productId);
-    const items = this.getItems();
-    const item = items.find(entry => entry.productId === productId);
+    const items = this.getAllItems();
+    const item = items.find(entry => entry.productId === productId && !entry.savedForLater);
     if (!item) return;
 
     if (qty <= 0) {
@@ -309,12 +369,47 @@ const Cart = {
   },
 
   removeItem(productId) {
-    const items = this.getItems().filter(item => item.productId !== productId);
+    const items = this.getAllItems().filter(item => !(item.productId === productId && !item.savedForLater));
+    this.saveItems(items);
+  },
+
+  removeSavedItem(productId) {
+    const items = this.getAllItems().filter(item => !(item.productId === productId && item.savedForLater));
     this.saveItems(items);
   },
 
   clear(options = {}) {
-    this.saveItems([], options);
+    const includeSaved = !!options.includeSaved;
+    if (includeSaved) {
+      this.saveItems([], options);
+      return;
+    }
+
+    const savedItems = this.getSavedItems();
+    this.saveItems(savedItems, options);
+  },
+
+  saveForLater(productId) {
+    const items = this.getAllItems();
+    const item = items.find(entry => entry.productId === productId && !entry.savedForLater);
+    if (!item) return false;
+    item.savedForLater = true;
+    this.saveItems(items);
+    return true;
+  },
+
+  moveSavedToCart(productId) {
+    const items = this.getAllItems();
+    const item = items.find(entry => entry.productId === productId && entry.savedForLater);
+    if (!item) return false;
+
+    const product = ProductData.getById(productId);
+    if (!product || product.stock <= 0) return false;
+
+    item.savedForLater = false;
+    item.qty = Math.min(item.qty, product.stock);
+    this.saveItems(items);
+    return true;
   },
 
   getTotal() {
@@ -873,7 +968,7 @@ async function initNav() {
     logoutBtn.addEventListener('click', async (e) => {
       e.preventDefault();
       await Cart.flushSync();
-      Cart.clear({ syncRemote: false, owner: 'guest' });
+      Cart.clear({ syncRemote: false, owner: 'guest', includeSaved: true });
       await Auth.logout();
     });
   }

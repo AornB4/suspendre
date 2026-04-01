@@ -260,6 +260,48 @@ async function renderWishlist() {
     if (!product) return;
     
     const card = buildProductCard(product);
+    const actionBar = document.createElement('div');
+    actionBar.className = 'wishlist-card-actions';
+
+    const moveBtn = document.createElement('button');
+    moveBtn.className = 'btn-primary wishlist-move-btn';
+    moveBtn.textContent = 'Move to Cart';
+
+    const removeBtn = document.createElement('button');
+    removeBtn.className = 'btn-outline wishlist-remove-btn';
+    removeBtn.textContent = 'Remove';
+
+    moveBtn.addEventListener('click', async () => {
+      const added = Cart.addItem(product.id);
+      if (!added) {
+        showToast('Could not move this item to cart.', 'error');
+        return;
+      }
+
+      const result = await Auth.removeWishlistItem(product.id);
+      if (!result.success) {
+        showToast(result.message || 'Moved to cart, but wishlist could not update.', 'error');
+        return;
+      }
+
+      showToast(`${product.name} moved to cart.`, 'success');
+      renderWishlist();
+      setTimeout(() => CartDrawer.open(), 100);
+    });
+
+    removeBtn.addEventListener('click', async () => {
+      const result = await Auth.removeWishlistItem(product.id);
+      if (!result.success) {
+        showToast(result.message || 'Could not update wishlist.', 'error');
+        return;
+      }
+
+      showToast(`${product.name} removed from wishlist.`);
+      renderWishlist();
+    });
+
+    actionBar.append(moveBtn, removeBtn);
+    card.appendChild(actionBar);
     container.appendChild(card);
   });
 }

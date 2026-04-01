@@ -23,13 +23,17 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 function renderCart() {
   const items    = Cart.getItems();
+  const savedItems = Cart.getSavedItems();
   const layout   = document.getElementById('cartLayout');
   const empty    = document.getElementById('cartEmpty');
   const cartItemsEl = document.getElementById('cartItems');
+  const savedItemsPanel = document.getElementById('savedItemsPanel');
+  const savedItemsEl = document.getElementById('savedItems');
+  const summary = document.getElementById('cartSummary');
   const summaryLines = document.getElementById('summaryLines');
   const totalEl  = document.getElementById('cartTotal');
 
-  if (items.length === 0) {
+  if (items.length === 0 && savedItems.length === 0) {
     if (layout) layout.style.display = 'none';
     if (empty)  empty.style.display  = 'block';
     return;
@@ -37,10 +41,20 @@ function renderCart() {
 
   if (layout) layout.style.display = '';
   if (empty)  empty.style.display  = 'none';
+  if (summary) summary.style.display = items.length > 0 ? '' : 'none';
 
   // Build cart items
   if (cartItemsEl) {
     cartItemsEl.innerHTML = '';
+    if (items.length === 0) {
+      cartItemsEl.innerHTML = `
+        <div class="cart-inline-empty">
+          <p style="margin-bottom:12px;">Your active cart is empty.</p>
+          <p style="color:var(--warm-gray);">Saved pieces remain below whenever you're ready.</p>
+        </div>
+      `;
+    }
+
     items.forEach((item, idx) => {
       const product = ProductData.getById(item.productId);
       if (!product) return;
@@ -97,7 +111,14 @@ function renderCart() {
       removeBtn.className = 'btn-remove';
       removeBtn.dataset.id = product.id;
       removeBtn.textContent = 'Remove';
-      controlsDiv.append(qtyDiv, removeBtn);
+      const saveBtn = document.createElement('button');
+      saveBtn.className = 'btn-save-later';
+      saveBtn.dataset.id = product.id;
+      saveBtn.textContent = 'Save for Later';
+      const linksDiv = document.createElement('div');
+      linksDiv.className = 'cart-item-links';
+      linksDiv.append(saveBtn, removeBtn);
+      controlsDiv.append(qtyDiv, linksDiv);
 
       row.append(imgDiv, infoDiv, controlsDiv);
 
@@ -124,7 +145,93 @@ function renderCart() {
         renderCart();
       });
 
+      saveBtn.addEventListener('click', () => {
+        const moved = Cart.saveForLater(product.id);
+        if (!moved) {
+          showToast('Could not save this item for later.', 'error');
+          return;
+        }
+        showToast(`${product.name} saved for later.`, 'success');
+        renderCart();
+      });
+
       cartItemsEl.appendChild(row);
+    });
+  }
+
+  if (savedItemsPanel && savedItemsEl) {
+    savedItemsPanel.style.display = savedItems.length > 0 ? 'block' : 'none';
+    savedItemsEl.innerHTML = '';
+
+    savedItems.forEach((item, idx) => {
+      const product = ProductData.getById(item.productId);
+      if (!product) return;
+
+      const row = document.createElement('div');
+      row.className = 'cart-item';
+      row.style.animationDelay = `${idx * 0.06}s`;
+
+      const imgSrc = ProductData.getImageSrc(product);
+
+      const imgDiv = document.createElement('div');
+      imgDiv.className = 'cart-item-img';
+      const img = document.createElement('img');
+      img.src = imgSrc;
+      img.alt = product.name;
+      img.loading = 'lazy';
+      img.onerror = function() { this.onerror = null; this.src = './images/placeholder.svg'; };
+      imgDiv.appendChild(img);
+
+      const infoDiv = document.createElement('div');
+      infoDiv.className = 'cart-item-info';
+      const catP = document.createElement('p');
+      catP.className = 'cart-item-category';
+      catP.textContent = product.category;
+      const nameH3 = document.createElement('h3');
+      nameH3.className = 'cart-item-name';
+      nameH3.textContent = product.name;
+      const priceP = document.createElement('p');
+      priceP.className = 'cart-item-price';
+      priceP.textContent = formatPrice(product.price);
+      const qtyNote = document.createElement('p');
+      qtyNote.className = 'cart-item-category';
+      qtyNote.style.marginTop = '10px';
+      qtyNote.textContent = `Saved quantity: ${item.qty}`;
+      infoDiv.append(catP, nameH3, priceP, qtyNote);
+
+      const controlsDiv = document.createElement('div');
+      controlsDiv.className = 'cart-item-controls';
+      const moveBtn = document.createElement('button');
+      moveBtn.className = 'btn-move-to-cart';
+      moveBtn.dataset.id = product.id;
+      moveBtn.textContent = 'Move to Cart';
+      const removeBtn = document.createElement('button');
+      removeBtn.className = 'btn-remove';
+      removeBtn.dataset.id = product.id;
+      removeBtn.textContent = 'Remove';
+      const linksDiv = document.createElement('div');
+      linksDiv.className = 'cart-item-links';
+      linksDiv.append(moveBtn, removeBtn);
+      controlsDiv.appendChild(linksDiv);
+
+      moveBtn.addEventListener('click', () => {
+        const moved = Cart.moveSavedToCart(product.id);
+        if (!moved) {
+          showToast('Could not move this item back to cart.', 'error');
+          return;
+        }
+        showToast(`${product.name} moved back to cart.`, 'success');
+        renderCart();
+      });
+
+      removeBtn.addEventListener('click', () => {
+        Cart.removeSavedItem(product.id);
+        showToast(`${product.name} removed from saved items.`);
+        renderCart();
+      });
+
+      row.append(imgDiv, infoDiv, controlsDiv);
+      savedItemsEl.appendChild(row);
     });
   }
 
