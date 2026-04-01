@@ -5,33 +5,288 @@
 // ===== CART =====
 const Cart = {
   KEY: 'suspendre_cart',
+  OWNER_KEY: 'suspendre_cart_owner',
+  GUEST_DIRTY_KEY: 'suspendre_cart_guest_dirty',
+  cache: [],
+  initialized: false,
+  initPromise: null,
+  syncPromise: Promise.resolve(),
+  activeUserId: null,
+  authTransitionUserId: null,
+  authTransitionPromise: null,
 
-  getItems() {
-    return JSON.parse(localStorage.getItem(this.KEY)) || [];
+  getClient() {
+    const db = window.SUSPENDRE_SUPABASE;
+    if (!db || !db.isConfigured()) return null;
+    return db.getClient();
   },
 
-  saveItems(items) {
-    localStorage.setItem(this.KEY, JSON.stringify(items));
+  getStorageOwner() {
+    return localStorage.getItem(this.OWNER_KEY) || 'guest';
+  },
+
+  isGuestDirty() {
+    return localStorage.getItem(this.GUEST_DIRTY_KEY) === 'true';
+  },
+
+  setGuestDirty(value) {
+    localStorage.setItem(this.GUEST_DIRTY_KEY, value ? 'true' : 'false');
+  },
+
+  normalizeItem(item) {
+    if (!item || !item.productId) return null;
+    const product = ProductData.getById(item.productId);
+    if (!product || product.stock <= 0) return null;
+
+    const qty = Math.max(1, Math.min(Number(item.qty) || 1, product.stock));
+    return { productId: product.id, qty };
+  },
+
+  cloneItems(items) {
+    return (Array.isArray(items) ? items : [])
+      .map(item => this.normalizeItem(item))
+      .filter(Boolean);
+  },
+
+  loadLocalItems() {
+    try {
+      return this.cloneItems(JSON.parse(localStorage.getItem(this.KEY)) || []);
+    } catch (error) {
+      console.warn('Failed to parse cached cart. Resetting cart cache.', error);
+      return [];
+    }
+  },
+
+  persistLocal(items, owner = this.getStorageOwner(), options = {}) {
+    this.cache = this.cloneItems(items);
+    localStorage.setItem(this.KEY, JSON.stringify(this.cache));
+    localStorage.setItem(this.OWNER_KEY, owner || 'guest');
+    if (typeof options.guestDirty === 'boolean') {
+      this.setGuestDirty(options.guestDirty);
+    } else if ((owner || 'guest') !== 'guest') {
+      this.setGuestDirty(false);
+    }
     this.updateNavCount();
+    window.dispatchEvent(new CustomEvent('suspendre:cart-updated', {
+      detail: {
+        items: this.getItems(),
+        owner: owner || 'guest',
+        count: this.getCount()
+      }
+    }));
+  },
+
+  async loadRemoteItems(userId) {
+    const client = this.getClient();
+    if (!client || !userId) return null;
+
+    const { data, error } = await client
+      .from('cart_items')
+      .select('product_id, quantity, created_at')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: true });
+
+    if (error) {
+      console.error('Failed to load cart items from Supabase.', error);
+      return null;
+    }
+
+    return (data || [])
+      .map(item => {
+        const product = ProductData.getById(item.product_id);
+        if (!product) return null;
+        return this.normalizeItem({
+          productId: product.id,
+          qty: item.quantity
+        });
+      })
+      .filter(Boolean);
+  },
+
+  async replaceRemoteItems(userId, items) {
+    const client = this.getClient();
+    if (!client || !userId) return false;
+
+    const normalizedItems = this.cloneItems(items);
+    const rows = normalizedItems
+      .map(item => {
+        const product = ProductData.getById(item.productId);
+        if (!product || !product.dbId) return null;
+        return {
+          user_id: userId,
+          product_id: product.dbId,
+          quantity: item.qty
+        };
+      })
+      .filter(Boolean);
+
+    if (rows.length > 0) {
+      const { error } = await client
+        .from('cart_items')
+        .upsert(rows, { onConflict: 'user_id,product_id' });
+
+      if (error) {
+        console.error('Failed to save cart items to Supabase.', error);
+        return false;
+      }
+    }
+
+    const productIds = rows.map(row => row.product_id);
+    let deleteQuery = client
+      .from('cart_items')
+      .delete()
+      .eq('user_id', userId);
+
+    if (productIds.length > 0) {
+      deleteQuery = deleteQuery.not('product_id', 'in', `(${productIds.map(id => `"${id}"`).join(',')})`);
+    }
+
+    const { error: deleteError } = await deleteQuery;
+    if (deleteError) {
+      console.error('Failed to prune removed cart items from Supabase.', deleteError);
+      return false;
+    }
+
+    return true;
+  },
+
+  mergeCollections(baseItems, extraItems) {
+    const merged = new Map();
+
+    [...this.cloneItems(baseItems), ...this.cloneItems(extraItems)].forEach(item => {
+      const product = ProductData.getById(item.productId);
+      if (!product || product.stock <= 0) return;
+      const existingQty = merged.get(product.id) || 0;
+      merged.set(product.id, Math.min(existingQty + item.qty, product.stock));
+    });
+
+    return Array.from(merged.entries()).map(([productId, qty]) => ({ productId, qty }));
+  },
+
+  async init() {
+    if (this.initPromise) return this.initPromise;
+
+    this.initPromise = (async () => {
+      await Auth.ready();
+      await ProductData.ready();
+      this.cache = this.loadLocalItems();
+
+      const user = Auth.getCurrentUser();
+      const client = this.getClient();
+      const storageOwner = this.getStorageOwner();
+      const shouldMergeGuestCart = storageOwner === 'guest' && this.isGuestDirty() && this.cache.length > 0;
+
+      if (user && client) {
+        const remoteItems = await this.loadRemoteItems(user.id);
+
+        if (Array.isArray(remoteItems)) {
+          const mergedItems = shouldMergeGuestCart
+            ? this.mergeCollections(remoteItems, this.cache)
+            : remoteItems;
+
+          if (shouldMergeGuestCart) {
+            await this.replaceRemoteItems(user.id, mergedItems);
+          }
+
+          this.activeUserId = user.id;
+          this.initialized = true;
+          this.persistLocal(mergedItems, user.id, { guestDirty: false });
+          return this.getItems();
+        }
+      }
+
+      this.activeUserId = user ? user.id : null;
+      this.initialized = true;
+      this.persistLocal(this.cache, user ? user.id : 'guest', {
+        guestDirty: user ? false : this.isGuestDirty()
+      });
+      return this.getItems();
+    })();
+
+    return this.initPromise;
+  },
+
+  ready() {
+    return this.init();
+  },
+
+  async handleAuthChange(user) {
+    const nextUserId = user && user.id ? user.id : null;
+    if (this.initialized && nextUserId === this.activeUserId) return;
+    if (this.authTransitionPromise && nextUserId === this.authTransitionUserId) {
+      return this.authTransitionPromise;
+    }
+
+    this.authTransitionUserId = nextUserId;
+    this.authTransitionPromise = (async () => {
+      this.initPromise = null;
+      this.initialized = false;
+
+      if (!nextUserId && this.getStorageOwner() !== 'guest') {
+        this.persistLocal([], 'guest', { guestDirty: false });
+      }
+
+      await this.ready();
+    })();
+
+    try {
+      await this.authTransitionPromise;
+    } finally {
+      this.authTransitionUserId = null;
+      this.authTransitionPromise = null;
+    }
+  },
+
+  scheduleRemoteSync() {
+    const user = Auth.getCurrentUser();
+    const client = this.getClient();
+    if (!user || !client) return;
+
+    const snapshot = this.getItems();
+    this.syncPromise = this.syncPromise
+      .catch(() => undefined)
+      .then(async () => {
+        await this.replaceRemoteItems(user.id, snapshot);
+      });
+  },
+
+  async flushSync() {
+    try {
+      await this.syncPromise;
+    } catch (error) {
+      console.error('Cart sync did not finish cleanly.', error);
+    }
+  },
+
+  getItems() {
+    if (!this.initialized && this.cache.length === 0) {
+      this.cache = this.loadLocalItems();
+    }
+    return this.cloneItems(this.cache);
+  },
+
+  saveItems(items, options = {}) {
+    const user = Auth.getCurrentUser();
+    const owner = options.owner || (user ? user.id : 'guest');
+    this.persistLocal(items, owner, {
+      guestDirty: typeof options.guestDirty === 'boolean' ? options.guestDirty : !user
+    });
+
+    if (options.syncRemote === false) return;
+    this.scheduleRemoteSync();
   },
 
   addItem(productId, qty = 1) {
     const product = ProductData.getById(productId);
-    if (!product) return false;
-    if (product.stock === 0) return false;
+    if (!product || product.stock === 0) return false;
 
     const items = this.getItems();
-    const existing = items.find(i => i.productId === productId);
+    const existing = items.find(item => item.productId === product.id);
 
     if (existing) {
-      const newQty = existing.qty + qty;
-      if (newQty > product.stock) {
-        existing.qty = product.stock;
-      } else {
-        existing.qty = newQty;
-      }
+      existing.qty = Math.min(existing.qty + qty, product.stock);
     } else {
-      items.push({ productId, qty: Math.min(qty, product.stock) });
+      items.push({ productId: product.id, qty: Math.min(qty, product.stock) });
     }
 
     this.saveItems(items);
@@ -39,26 +294,27 @@ const Cart = {
   },
 
   updateQty(productId, qty) {
+    const product = ProductData.getById(productId);
     const items = this.getItems();
-    const item = items.find(i => i.productId === productId);
+    const item = items.find(entry => entry.productId === productId);
     if (!item) return;
+
     if (qty <= 0) {
       this.removeItem(productId);
       return;
     }
-    const product = ProductData.getById(productId);
-    item.qty = product ? Math.min(qty, product.stock) : qty;
+
+    item.qty = product ? Math.min(qty, product.stock) : Math.max(1, qty);
     this.saveItems(items);
   },
 
   removeItem(productId) {
-    const items = this.getItems().filter(i => i.productId !== productId);
+    const items = this.getItems().filter(item => item.productId !== productId);
     this.saveItems(items);
   },
 
-  clear() {
-    localStorage.removeItem(this.KEY);
-    this.updateNavCount();
+  clear(options = {}) {
+    this.saveItems([], options);
   },
 
   getTotal() {
@@ -77,6 +333,10 @@ const Cart = {
     if (el) el.textContent = this.getCount();
   }
 };
+
+window.addEventListener('suspendre:auth-ready', (event) => {
+  void Cart.handleAuthChange(event.detail ? event.detail.user : null);
+});
 
 // ===== CART DRAWER =====
 const CartDrawer = {
@@ -561,6 +821,7 @@ function formatDate(iso) {
 async function initNav() {
   await Auth.ready();
   await ProductData.ready();
+  await Cart.ready();
 
   const user = Auth.getCurrentUser();
   const loginItem = document.getElementById('navLoginItem');
@@ -611,7 +872,8 @@ async function initNav() {
   if (logoutBtn) {
     logoutBtn.addEventListener('click', async (e) => {
       e.preventDefault();
-      Cart.clear();
+      await Cart.flushSync();
+      Cart.clear({ syncRemote: false, owner: 'guest' });
       await Auth.logout();
     });
   }

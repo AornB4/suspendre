@@ -6,6 +6,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   await Auth.ready();
   await ProductData.ready();
   await Orders.ready();
+  await Cart.ready();
 
   if (!Auth.isLoggedIn()) {
     window.location.href = 'login.html';

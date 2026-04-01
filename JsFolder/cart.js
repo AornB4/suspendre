@@ -5,10 +5,12 @@
 document.addEventListener('DOMContentLoaded', async () => {
   await Auth.ready();
   await ProductData.ready();
+  await Cart.ready();
 
   // Cart is accessible to everyone (guests and logged-in users)
 
   renderCart();
+  window.addEventListener('suspendre:cart-updated', renderCart);
 
   document.getElementById('checkoutBtn')?.addEventListener('click', handleCheckout);
   document.getElementById('receiptClose')?.addEventListener('click', () => {
@@ -200,6 +202,7 @@ async function finalizeOrder() {
   }
 
   Cart.clear();
+  await Cart.flushSync();
   pendingOrderItems = null;
 
   document.getElementById('receiptModal').style.display = 'none';
