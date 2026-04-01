@@ -24,6 +24,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     query: ''
   };
 
+  const validCategories = new Set(['all', 'wood', 'metal', 'velvet', 'gold']);
+  const validAvailability = new Set(['all', 'in-stock', 'low-stock', 'sold-out']);
+  const validPrices = new Set(['all', 'under-250', '250-500', 'over-500']);
+  const validSorts = new Set(['curated', 'relevance', 'price-asc', 'price-desc', 'name', 'stock-desc']);
+
   function normalizeText(value) {
     return String(value || '')
       .toLowerCase()
@@ -111,6 +116,61 @@ document.addEventListener('DOMContentLoaded', async () => {
     return `Showing ${total} refined result${total !== 1 ? 's' : ''} for ${fragments.join(' · ')}.`;
   }
 
+  function applyStateToControls() {
+    if (searchInput) searchInput.value = discoveryState.query;
+    if (availabilityFilter) availabilityFilter.value = discoveryState.availability;
+    if (priceFilter) priceFilter.value = discoveryState.price;
+    if (sortBy) sortBy.value = discoveryState.sort;
+
+    categoryButtons.forEach(button => {
+      button.classList.toggle('active', button.dataset.category === discoveryState.category);
+    });
+  }
+
+  function loadStateFromUrl() {
+    const params = new URLSearchParams(window.location.search);
+    const nextCategory = params.get('category') || 'all';
+    const nextAvailability = params.get('availability') || 'all';
+    const nextPrice = params.get('price') || 'all';
+    const nextSort = params.get('sort') || 'curated';
+    const nextQuery = params.get('q') || '';
+
+    discoveryState.category = validCategories.has(nextCategory) ? nextCategory : 'all';
+    discoveryState.availability = validAvailability.has(nextAvailability) ? nextAvailability : 'all';
+    discoveryState.price = validPrices.has(nextPrice) ? nextPrice : 'all';
+    discoveryState.sort = validSorts.has(nextSort) ? nextSort : 'curated';
+    discoveryState.query = nextQuery.trim();
+
+    applyStateToControls();
+  }
+
+  function syncUrlState() {
+    const params = new URLSearchParams();
+
+    if (discoveryState.query) params.set('q', discoveryState.query);
+    if (discoveryState.category !== 'all') params.set('category', discoveryState.category);
+    if (discoveryState.availability !== 'all') params.set('availability', discoveryState.availability);
+    if (discoveryState.price !== 'all') params.set('price', discoveryState.price);
+    if (discoveryState.sort !== 'curated') params.set('sort', discoveryState.sort);
+
+    const queryString = params.toString();
+    const nextUrl = queryString ? `shop.html?${queryString}` : 'shop.html';
+    window.history.replaceState({}, '', nextUrl);
+  }
+
+  function buildProductUrl(productId) {
+    const currentQuery = window.location.search;
+    const returnParam = currentQuery ? `&return=${encodeURIComponent(currentQuery)}` : '';
+    return `product.html?id=${productId}${returnParam}`;
+  }
+
+  function decorateProductLinks(card, productId) {
+    const destination = buildProductUrl(productId);
+    card.querySelectorAll('a[href^="product.html?id="]').forEach(link => {
+      link.href = destination;
+    });
+  }
+
   function renderEmptyState() {
     if (!grid) return;
     grid.innerHTML = `
@@ -139,10 +199,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (priceFilter) priceFilter.value = 'all';
     if (sortBy) sortBy.value = 'curated';
 
-    categoryButtons.forEach(button => {
-      button.classList.toggle('active', button.dataset.category === 'all');
-    });
-
+    applyStateToControls();
     render();
   }
 
@@ -197,6 +254,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       activeSummary.textContent = summarizeState(products.length);
     }
 
+    syncUrlState();
+
     grid.innerHTML = '';
 
     if (products.length === 0) {
@@ -206,6 +265,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     products.forEach((product, index) => {
       const card = buildProductCard(product);
+      decorateProductLinks(card, product.id);
       card.style.animation = `fadeIn 0.4s ${index * 0.05}s both`;
       grid.appendChild(card);
     });
@@ -257,5 +317,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     clearBtn.addEventListener('click', resetFilters);
   }
 
+  loadStateFromUrl();
   render();
 });

@@ -2,9 +2,87 @@
 //  SUSPENDRE — Product Page Logic
 // =========================================
 
+const RECENTLY_VIEWED_KEY = 'suspendre_recently_viewed';
+
+function getReturnQuery() {
+  const params = new URLSearchParams(window.location.search);
+  const returnParam = params.get('return');
+  if (!returnParam || !returnParam.startsWith('?')) return '';
+  return returnParam;
+}
+
+function configureBackLinks() {
+  const backHref = `shop.html${getReturnQuery()}`;
+  const backLink = document.querySelector('.pdp-back-link');
+  const breadcrumbLink = document.querySelector('.pdp-breadcrumbs a');
+
+  if (backLink) backLink.href = backHref;
+  if (breadcrumbLink) breadcrumbLink.href = backHref;
+}
+
+function rememberRecentlyViewed(productId) {
+  if (!productId) return;
+
+  let recentIds = [];
+  try {
+    recentIds = JSON.parse(localStorage.getItem(RECENTLY_VIEWED_KEY) || '[]');
+  } catch (error) {
+    recentIds = [];
+  }
+
+  const nextIds = [productId, ...recentIds.filter(id => id !== productId)].slice(0, 8);
+  localStorage.setItem(RECENTLY_VIEWED_KEY, JSON.stringify(nextIds));
+}
+
+function renderRecentlyViewed(currentProductId) {
+  const section = document.getElementById('pdpRecentlyViewed');
+  const grid = document.getElementById('recentlyViewedGrid');
+  if (!section || !grid) return;
+
+  let recentIds = [];
+  try {
+    recentIds = JSON.parse(localStorage.getItem(RECENTLY_VIEWED_KEY) || '[]');
+  } catch (error) {
+    recentIds = [];
+  }
+
+  const products = recentIds
+    .filter(id => id !== currentProductId)
+    .map(id => ProductData.getById(id))
+    .filter(product => product && product.active !== false)
+    .slice(0, 4);
+
+  if (!products.length) {
+    section.style.display = 'none';
+    grid.innerHTML = '';
+    return;
+  }
+
+  const backQuery = getReturnQuery();
+  grid.innerHTML = '';
+
+  products.forEach(product => {
+    const card = document.createElement('a');
+    card.className = 'pdp-recent-card';
+    card.href = `product.html?id=${product.id}${backQuery ? `&return=${encodeURIComponent(backQuery)}` : ''}`;
+    card.innerHTML = `
+      <img src="${ProductData.getImageSrc(product)}" alt="${product.name}">
+      <div class="pdp-recent-copy">
+        <span class="pdp-recent-category">${product.category}</span>
+        <div class="pdp-recent-title">${product.name}</div>
+        <div class="pdp-recent-price">${formatPrice(product.price)}</div>
+      </div>
+    `;
+    grid.appendChild(card);
+  });
+
+  section.style.display = 'block';
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
   await Auth.ready();
   await ProductData.ready();
+  configureBackLinks();
 
   const params = new URLSearchParams(window.location.search);
   const productId = params.get('id');
@@ -28,7 +106,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   // Bind Data
-  document.title = `${product.name} — SUSPENDRE`;
+  document.title = `${product.name} - SUSPENDRE`;
   document.getElementById('pdpBreadcrumbCategory').textContent = product.category;
   document.getElementById('pdpTitle').textContent = product.name;
   document.getElementById('pdpPrice').textContent = formatPrice(product.price);
@@ -128,6 +206,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Reveal UI
   loadingEl.style.display = 'none';
   contentEl.style.display = 'grid';
+  rememberRecentlyViewed(product.id);
+  renderRecentlyViewed(product.id);
 
   // Reviews Logic
   await initSupabaseReviews(product.id);
