@@ -134,10 +134,31 @@
             Reviews</h2>
           <div class="reviews-summary">
             <div class="stars" id="avgStars">★★★★★</div>
+            <span id="avgRatingValue">0.0</span>
             <span id="reviewCount">0 Reviews</span>
           </div>
         </div>
         <button id="writeReviewBtn" class="btn-outline">Write a Review</button>
+      </div>
+
+      <div class="reviews-meta-bar">
+        <div class="reviews-breakdown" id="reviewsBreakdown">
+          <div class="review-breakdown-row"><span>5</span><div class="review-breakdown-track"><span style="width:0%"></span></div><strong>0</strong></div>
+          <div class="review-breakdown-row"><span>4</span><div class="review-breakdown-track"><span style="width:0%"></span></div><strong>0</strong></div>
+          <div class="review-breakdown-row"><span>3</span><div class="review-breakdown-track"><span style="width:0%"></span></div><strong>0</strong></div>
+          <div class="review-breakdown-row"><span>2</span><div class="review-breakdown-track"><span style="width:0%"></span></div><strong>0</strong></div>
+          <div class="review-breakdown-row"><span>1</span><div class="review-breakdown-track"><span style="width:0%"></span></div><strong>0</strong></div>
+        </div>
+        <div class="reviews-sort">
+          <label for="reviewsSort">Sort</label>
+          <select id="reviewsSort">
+            <option value="newest">Newest</option>
+            <option value="oldest">Oldest</option>
+            <option value="highest">Highest Rating</option>
+            <option value="lowest">Lowest Rating</option>
+            <option value="verified">Verified Purchases</option>
+          </select>
+        </div>
       </div>
 
       <!-- Review Form -->

@@ -461,8 +461,13 @@ function renderReviewsList(productId) {
 }
 
 // ===== SUPABASE REVIEWS SYSTEM =====
+const ReviewsUIState = {
+  sort: 'newest'
+};
+
 const SupabaseReviewsData = {
   userNameColumnAvailable: null,
+  verifiedPurchaseColumnAvailable: null,
 
   getClient() {
     const db = window.SUSPENDRE_SUPABASE;
@@ -473,6 +478,13 @@ const SupabaseReviewsData = {
   hasMissingColumnError(error, columnName) {
     const message = String(error && error.message ? error.message : '').toLowerCase();
     return message.includes(columnName.toLowerCase()) && message.includes('column');
+  },
+
+  getSelectFields(options = {}) {
+    const fields = ['id', 'product_id', 'user_id', 'rating', 'content', 'created_at', 'updated_at'];
+    if (options.includeUserName) fields.splice(3, 0, 'user_name');
+    if (options.includeVerifiedPurchase) fields.splice(options.includeUserName ? 4 : 3, 0, 'verified_purchase');
+    return fields.join(', ');
   },
 
   normalizeReview(review) {
@@ -487,7 +499,8 @@ const SupabaseReviewsData = {
       rating: Number(review.rating) || 0,
       text: review.content || '',
       date: review.created_at || new Date().toISOString(),
-      isOwn
+      isOwn,
+      verifiedPurchase: !!review.verified_purchase
     };
   },
 
@@ -495,38 +508,47 @@ const SupabaseReviewsData = {
     const client = this.getClient();
     if (!client || !productDbId) return [];
 
-    if (this.userNameColumnAvailable !== false) {
-      const { data, error } = await client
-        .from('reviews')
-        .select('id, product_id, user_id, user_name, rating, content, created_at, updated_at')
-        .eq('product_id', productDbId)
-        .order('created_at', { ascending: false });
+    const includeUserName = this.userNameColumnAvailable !== false;
+    const includeVerifiedPurchase = this.verifiedPurchaseColumnAvailable !== false;
 
-      if (!error) {
-        this.userNameColumnAvailable = true;
-        return data || [];
-      }
-
-      if (!this.hasMissingColumnError(error, 'user_name')) {
-        console.error('Failed to load reviews.', error);
-        return [];
-      }
-
-      this.userNameColumnAvailable = false;
-    }
-
-    const { data, error } = await client
+    const initial = await client
       .from('reviews')
-      .select('id, product_id, user_id, rating, content, created_at, updated_at')
+      .select(this.getSelectFields({ includeUserName, includeVerifiedPurchase }))
       .eq('product_id', productDbId)
       .order('created_at', { ascending: false });
 
-    if (error) {
-      console.error('Failed to load reviews.', error);
+    if (!initial.error) {
+      if (includeUserName) this.userNameColumnAvailable = true;
+      if (includeVerifiedPurchase) this.verifiedPurchaseColumnAvailable = true;
+      return initial.data || [];
+    }
+
+    const missingUserName = includeUserName && this.hasMissingColumnError(initial.error, 'user_name');
+    const missingVerifiedPurchase = includeVerifiedPurchase && this.hasMissingColumnError(initial.error, 'verified_purchase');
+
+    if (!missingUserName && !missingVerifiedPurchase) {
+      console.error('Failed to load reviews.', initial.error);
       return [];
     }
 
-    return data || [];
+    if (missingUserName) this.userNameColumnAvailable = false;
+    if (missingVerifiedPurchase) this.verifiedPurchaseColumnAvailable = false;
+
+    const fallback = await client
+      .from('reviews')
+      .select(this.getSelectFields({
+        includeUserName: this.userNameColumnAvailable !== false,
+        includeVerifiedPurchase: this.verifiedPurchaseColumnAvailable !== false
+      }))
+      .eq('product_id', productDbId)
+      .order('created_at', { ascending: false });
+
+    if (fallback.error) {
+      console.error('Failed to load reviews.', fallback.error);
+      return [];
+    }
+
+    return fallback.data || [];
   },
 
   async getByProduct(productId) {
@@ -537,6 +559,24 @@ const SupabaseReviewsData = {
 
     const rows = await this.fetchRows(product.dbId);
     return rows.map((review) => this.normalizeReview(review));
+  },
+
+  async hasVerifiedPurchase(productDbId) {
+    const client = this.getClient();
+    if (!client || !productDbId || !Auth.isLoggedIn()) return false;
+
+    const { data, error } = await client
+      .from('order_items')
+      .select('id')
+      .eq('product_id', productDbId)
+      .limit(1);
+
+    if (error) {
+      console.warn('Could not verify purchase status for review.', error);
+      return false;
+    }
+
+    return Array.isArray(data) && data.length > 0;
   },
 
   async saveReview(productId, user, rating, text) {
@@ -551,6 +591,8 @@ const SupabaseReviewsData = {
       return { success: false, message: 'Product not found.' };
     }
 
+    const verifiedPurchase = await this.hasVerifiedPurchase(product.dbId);
+
     const basePayload = {
       product_id: product.dbId,
       user_id: user.id,
@@ -562,26 +604,42 @@ const SupabaseReviewsData = {
     if (this.userNameColumnAvailable !== false) {
       payload.user_name = user.name || 'Suspendre Customer';
     }
+    if (this.verifiedPurchaseColumnAvailable !== false) {
+      payload.verified_purchase = verifiedPurchase;
+    }
 
     let query = client
       .from('reviews')
-      .upsert(payload, { onConflict: 'product_id,user_id' });
-
-    if (this.userNameColumnAvailable !== false) {
-      query = query.select('id, product_id, user_id, user_name, rating, content, created_at, updated_at');
-    } else {
-      query = query.select('id, product_id, user_id, rating, content, created_at, updated_at');
-    }
+      .upsert(payload, { onConflict: 'product_id,user_id' })
+      .select(this.getSelectFields({
+        includeUserName: this.userNameColumnAvailable !== false,
+        includeVerifiedPurchase: this.verifiedPurchaseColumnAvailable !== false
+      }));
 
     let { data, error } = await query.single();
 
-    if (error && this.userNameColumnAvailable !== false && this.hasMissingColumnError(error, 'user_name')) {
-      this.userNameColumnAvailable = false;
+    const missingUserName = this.userNameColumnAvailable !== false && this.hasMissingColumnError(error, 'user_name');
+    const missingVerifiedPurchase = this.verifiedPurchaseColumnAvailable !== false && this.hasMissingColumnError(error, 'verified_purchase');
+
+    if (error && (missingUserName || missingVerifiedPurchase)) {
+      if (missingUserName) this.userNameColumnAvailable = false;
+      if (missingVerifiedPurchase) this.verifiedPurchaseColumnAvailable = false;
+
+      const fallbackPayload = { ...basePayload };
+      if (this.userNameColumnAvailable !== false) {
+        fallbackPayload.user_name = user.name || 'Suspendre Customer';
+      }
+      if (this.verifiedPurchaseColumnAvailable !== false) {
+        fallbackPayload.verified_purchase = verifiedPurchase;
+      }
 
       const fallback = await client
         .from('reviews')
-        .upsert(basePayload, { onConflict: 'product_id,user_id' })
-        .select('id, product_id, user_id, rating, content, created_at, updated_at')
+        .upsert(fallbackPayload, { onConflict: 'product_id,user_id' })
+        .select(this.getSelectFields({
+          includeUserName: this.userNameColumnAvailable !== false,
+          includeVerifiedPurchase: this.verifiedPurchaseColumnAvailable !== false
+        }))
         .single();
 
       data = fallback.data;
@@ -599,6 +657,66 @@ const SupabaseReviewsData = {
   }
 };
 
+function sortReviews(reviews, sortValue) {
+  const list = [...reviews];
+  switch (sortValue) {
+    case 'oldest':
+      return list.sort((a, b) => new Date(a.date) - new Date(b.date));
+    case 'highest':
+      return list.sort((a, b) => b.rating - a.rating || new Date(b.date) - new Date(a.date));
+    case 'lowest':
+      return list.sort((a, b) => a.rating - b.rating || new Date(b.date) - new Date(a.date));
+    case 'verified':
+      return list.sort((a, b) => Number(b.verifiedPurchase) - Number(a.verifiedPurchase) || b.rating - a.rating || new Date(b.date) - new Date(a.date));
+    case 'newest':
+    default:
+      return list.sort((a, b) => new Date(b.date) - new Date(a.date));
+  }
+}
+
+function updateReviewSummary(reviews) {
+  const countEl = document.getElementById('reviewCount');
+  const avgStarsEl = document.getElementById('avgStars');
+  const avgRatingValueEl = document.getElementById('avgRatingValue');
+  const breakdownEl = document.getElementById('reviewsBreakdown');
+
+  if (!countEl || !avgStarsEl || !avgRatingValueEl || !breakdownEl) return;
+
+  countEl.textContent = `${reviews.length} Review${reviews.length !== 1 ? 's' : ''}`;
+
+  if (reviews.length === 0) {
+    avgStarsEl.textContent = '\u2605\u2605\u2605\u2605\u2605';
+    avgRatingValueEl.textContent = '0.0';
+    breakdownEl.querySelectorAll('.review-breakdown-row').forEach((row) => {
+      const fill = row.querySelector('.review-breakdown-track span');
+      const count = row.querySelector('strong');
+      if (fill) fill.style.width = '0%';
+      if (count) count.textContent = '0';
+    });
+    return;
+  }
+
+  const total = reviews.reduce((sum, review) => sum + review.rating, 0);
+  const average = total / reviews.length;
+  const roundedStars = Math.round(average);
+  avgStarsEl.textContent = '\u2605'.repeat(roundedStars) + '\u2606'.repeat(5 - roundedStars);
+  avgRatingValueEl.textContent = average.toFixed(1);
+
+  const countsByRating = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+  reviews.forEach((review) => {
+    countsByRating[review.rating] = (countsByRating[review.rating] || 0) + 1;
+  });
+
+  breakdownEl.querySelectorAll('.review-breakdown-row').forEach((row) => {
+    const rating = Number(row.querySelector('span')?.textContent || 0);
+    const count = countsByRating[rating] || 0;
+    const fill = row.querySelector('.review-breakdown-track span');
+    const countLabel = row.querySelector('strong');
+    if (fill) fill.style.width = `${(count / reviews.length) * 100}%`;
+    if (countLabel) countLabel.textContent = String(count);
+  });
+}
+
 async function initSupabaseReviews(productId) {
   const section = document.getElementById('pdpReviews');
   section.style.display = 'block';
@@ -612,6 +730,7 @@ async function initSupabaseReviews(productId) {
   const cancelBtn = document.getElementById('cancelReviewBtn');
   const submitBtn = document.getElementById('submitReviewBtn');
   const textInput = document.getElementById('reviewTextInput');
+  const sortSelect = document.getElementById('reviewsSort');
 
   starSpans.forEach((span) => {
     span.addEventListener('click', (e) => {
@@ -702,6 +821,16 @@ async function initSupabaseReviews(productId) {
     });
   });
 
+  if (sortSelect) {
+    sortSelect.addEventListener('change', async () => {
+      ReviewsUIState.sort = sortSelect.value || 'newest';
+      await renderSupabaseReviewsList(productId, (review) => {
+        existingUserReview = review;
+        syncReviewCta();
+      });
+    });
+  }
+
   await renderSupabaseReviewsList(productId, (review) => {
     existingUserReview = review;
     syncReviewCta();
@@ -711,27 +840,22 @@ async function initSupabaseReviews(productId) {
 
 async function renderSupabaseReviewsList(productId, onCurrentUserReviewChange = () => {}) {
   const listEl = document.getElementById('reviewsList');
-  const countEl = document.getElementById('reviewCount');
-  const avgStarsEl = document.getElementById('avgStars');
   const currentUserId = Auth.getCurrentUser()?.id || null;
 
   listEl.innerHTML = '<p style="color:var(--warm-gray); text-align:center; padding:40px 0;">Loading reviews...</p>';
 
-  const reviews = await SupabaseReviewsData.getByProduct(productId);
-  const currentUserReview = reviews.find((review) => review.userId === currentUserId) || null;
+  const rawReviews = await SupabaseReviewsData.getByProduct(productId);
+  const currentUserReview = rawReviews.find((review) => review.userId === currentUserId) || null;
   onCurrentUserReviewChange(currentUserReview);
 
-  countEl.textContent = `${reviews.length} Review${reviews.length !== 1 ? 's' : ''}`;
+  updateReviewSummary(rawReviews);
 
-  if (reviews.length === 0) {
-    avgStarsEl.textContent = '\u2605\u2605\u2605\u2605\u2605';
+  if (rawReviews.length === 0) {
     listEl.innerHTML = '<p style="color:var(--warm-gray); text-align:center; padding:40px 0;">Be the first to review this piece.</p>';
     return [];
   }
 
-  const avg = Math.round(reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length);
-  avgStarsEl.textContent = '\u2605'.repeat(avg) + '\u2606'.repeat(5 - avg);
-
+  const reviews = sortReviews(rawReviews, ReviewsUIState.sort);
   listEl.innerHTML = '';
   const safeString = (value) => String(value || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
@@ -739,10 +863,23 @@ async function renderSupabaseReviewsList(productId, onCurrentUserReviewChange = 
     const el = document.createElement('div');
     el.className = 'review-item';
     const stars = '\u2605'.repeat(review.rating) + '\u2606'.repeat(5 - review.rating);
+    const badges = [
+      review.isOwn ? '<span class="review-badge customer-note">Your Review</span>' : '<span class="review-badge customer-note">Customer</span>',
+      review.verifiedPurchase ? `
+        <span class="review-badge verified-purchase">
+          <svg viewBox="0 0 20 20" width="12" height="12" aria-hidden="true" focusable="false">
+            <circle cx="10" cy="10" r="8" fill="currentColor" opacity="0.16"></circle>
+            <path d="M6.4 10.1 8.7 12.4 13.6 7.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path>
+          </svg>
+          <span>Verified Purchase</span>
+        </span>
+      ` : ''
+    ].filter(Boolean).join('');
+
     el.innerHTML = `
       <div class="review-item-header">
         <div class="review-author">
-          ${safeString(review.userName)} <span class="review-badge">${review.isOwn ? 'Your Review' : 'Customer'}</span>
+          ${safeString(review.userName)} ${badges}
         </div>
         <span class="review-date">${formatDate(review.date)}</span>
       </div>
