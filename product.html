@@ -99,12 +99,30 @@
       </div>
     </div>
 
-    <section id="pdpRecentlyViewed" class="pdp-recent-section" style="display:none;">
-      <div class="pdp-recent-header">
-        <p class="section-label">Continue Exploring</p>
-        <h2>Recently Viewed</h2>
+    <section id="pdpRelatedSection" class="pdp-related-section" style="display:none;">
+      <div class="pdp-section-header">
+        <div class="pdp-section-heading">
+          <p class="section-label" id="pdpRelatedEyebrow">Curated Nearby</p>
+          <h2 id="pdpRelatedTitle">Selected for This Piece</h2>
+        </div>
+        <p class="pdp-section-copy" id="pdpRelatedCopy">
+          A few complementary pieces from the collection, chosen for material, availability, and finish.
+        </p>
       </div>
-      <div id="recentlyViewedGrid" class="pdp-recent-grid"></div>
+      <div id="relatedProductsGrid" class="pdp-related-grid"></div>
+    </section>
+
+    <section id="pdpRecentlyViewed" class="pdp-recent-section" style="display:none;">
+      <div class="pdp-section-header">
+        <div>
+          <p class="section-label">Continue Exploring</p>
+          <h2>Recently Viewed</h2>
+        </div>
+        <button type="button" id="recentlyViewedToggle" class="pdp-section-toggle" aria-expanded="false">
+          View Recently Viewed
+        </button>
+      </div>
+      <div id="recentlyViewedGrid" class="pdp-recent-grid" style="display:none;"></div>
     </section>
 
     <!-- Reviews Section -->

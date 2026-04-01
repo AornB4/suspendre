@@ -20,6 +20,116 @@ function configureBackLinks() {
   if (breadcrumbLink) breadcrumbLink.href = backHref;
 }
 
+function buildProductHref(productId) {
+  const backQuery = getReturnQuery();
+  return `product.html?id=${productId}${backQuery ? `&return=${encodeURIComponent(backQuery)}` : ''}`;
+}
+
+function getCategoryLabel(category) {
+  return String(category || '')
+    .replace(/-/g, ' ')
+    .replace(/\b\w/g, (match) => match.toUpperCase());
+}
+
+function updateRecentlyViewedToggle(isExpanded) {
+  const toggle = document.getElementById('recentlyViewedToggle');
+  const grid = document.getElementById('recentlyViewedGrid');
+  if (!toggle || !grid) return;
+
+  toggle.textContent = isExpanded ? 'Hide Recently Viewed' : 'View Recently Viewed';
+  toggle.setAttribute('aria-expanded', isExpanded ? 'true' : 'false');
+  grid.style.display = isExpanded ? 'grid' : 'none';
+}
+
+function getRelatedProducts(currentProduct) {
+  const allProducts = ProductData.getAll()
+    .filter((product) => product.active !== false && product.id !== currentProduct.id);
+
+  const currentPrice = Number(currentProduct.price) || 0;
+
+  return allProducts
+    .map((product) => {
+      const priceGap = Math.abs((Number(product.price) || 0) - currentPrice);
+      let score = 0;
+
+      if (product.category === currentProduct.category) score += 80;
+      if (product.stock > 0) score += 35;
+      if (product.stock > 0 && product.stock <= 4) score += 4;
+      if (product.featured) score += 16;
+      score += Math.max(0, 28 - Math.min(28, priceGap / 18));
+
+      if (product.category !== currentProduct.category && product.featured) score += 6;
+      if (product.category !== currentProduct.category && product.stock > 0) score += 4;
+      if (product.stock <= 0) score -= 42;
+
+      return {
+        product,
+        score,
+        priceGap
+      };
+    })
+    .sort((a, b) => (
+      b.score - a.score ||
+      a.priceGap - b.priceGap ||
+      (b.product.stock || 0) - (a.product.stock || 0) ||
+      a.product.name.localeCompare(b.product.name)
+    ))
+    .slice(0, 4)
+    .map((entry) => entry.product);
+}
+
+function renderRelatedProducts(currentProduct) {
+  const section = document.getElementById('pdpRelatedSection');
+  const grid = document.getElementById('relatedProductsGrid');
+  const eyebrow = document.getElementById('pdpRelatedEyebrow');
+  const title = document.getElementById('pdpRelatedTitle');
+  const copy = document.getElementById('pdpRelatedCopy');
+
+  if (!section || !grid || !currentProduct) return;
+
+  const relatedProducts = getRelatedProducts(currentProduct);
+  if (!relatedProducts.length) {
+    section.style.display = 'none';
+    grid.innerHTML = '';
+    return;
+  }
+
+  const categoryLabel = getCategoryLabel(currentProduct.category);
+  if (eyebrow) eyebrow.textContent = `${categoryLabel} Collection`;
+  if (title) title.textContent = `Selected Around ${currentProduct.name}`;
+  if (copy) {
+    copy.textContent = `Pieces chosen for a similar material story, strong availability, and a price rhythm that sits naturally beside ${currentProduct.name}.`;
+  }
+
+  grid.innerHTML = '';
+  relatedProducts.forEach((product) => {
+    const stockLabel = product.stock <= 0
+      ? 'Sold Out'
+      : product.stock <= 4
+        ? `Only ${product.stock} Left`
+        : 'In Stock';
+
+    const card = document.createElement('a');
+    card.className = 'pdp-related-card';
+    card.href = buildProductHref(product.id);
+    card.innerHTML = `
+      <img src="${ProductData.getImageSrc(product)}" alt="${product.name}">
+      <div class="pdp-related-copy">
+        <span class="pdp-related-category">${getCategoryLabel(product.category)}</span>
+        <div class="pdp-related-title">${product.name}</div>
+        <div class="pdp-related-price">${formatPrice(product.price)}</div>
+        <div class="pdp-related-meta">
+          <span class="pdp-related-stock">${stockLabel}</span>
+          <span class="pdp-related-link">View Piece</span>
+        </div>
+      </div>
+    `;
+    grid.appendChild(card);
+  });
+
+  section.style.display = 'block';
+}
+
 function rememberRecentlyViewed(productId) {
   if (!productId) return;
 
@@ -37,6 +147,7 @@ function rememberRecentlyViewed(productId) {
 function renderRecentlyViewed(currentProductId) {
   const section = document.getElementById('pdpRecentlyViewed');
   const grid = document.getElementById('recentlyViewedGrid');
+  const toggle = document.getElementById('recentlyViewedToggle');
   if (!section || !grid) return;
 
   let recentIds = [];
@@ -55,20 +166,20 @@ function renderRecentlyViewed(currentProductId) {
   if (!products.length) {
     section.style.display = 'none';
     grid.innerHTML = '';
+    if (toggle) toggle.style.display = 'none';
     return;
   }
 
-  const backQuery = getReturnQuery();
   grid.innerHTML = '';
 
   products.forEach(product => {
     const card = document.createElement('a');
     card.className = 'pdp-recent-card';
-    card.href = `product.html?id=${product.id}${backQuery ? `&return=${encodeURIComponent(backQuery)}` : ''}`;
+    card.href = buildProductHref(product.id);
     card.innerHTML = `
       <img src="${ProductData.getImageSrc(product)}" alt="${product.name}">
       <div class="pdp-recent-copy">
-        <span class="pdp-recent-category">${product.category}</span>
+        <span class="pdp-recent-category">${getCategoryLabel(product.category)}</span>
         <div class="pdp-recent-title">${product.name}</div>
         <div class="pdp-recent-price">${formatPrice(product.price)}</div>
       </div>
@@ -77,6 +188,14 @@ function renderRecentlyViewed(currentProductId) {
   });
 
   section.style.display = 'block';
+  if (toggle) {
+    toggle.style.display = '';
+    toggle.onclick = () => {
+      const expanded = toggle.getAttribute('aria-expanded') === 'true';
+      updateRecentlyViewedToggle(!expanded);
+    };
+  }
+  updateRecentlyViewedToggle(false);
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -206,6 +325,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Reveal UI
   loadingEl.style.display = 'none';
   contentEl.style.display = 'grid';
+  renderRelatedProducts(product);
   rememberRecentlyViewed(product.id);
   renderRecentlyViewed(product.id);
 
