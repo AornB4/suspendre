@@ -557,16 +557,216 @@
   border-radius: 4px;
 }
 
+.wishlist-meta-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 22px;
+}
+
+.wishlist-subcopy {
+  color: var(--warm-gray);
+  line-height: 1.6;
+  max-width: 520px;
+}
+
+.wishlist-count-badge {
+  flex-shrink: 0;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(215, 187, 114, 0.14);
+  color: #8c6a16;
+  border: 1px solid rgba(176, 138, 42, 0.28);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.wishlist-empty-state {
+  text-align: center;
+  padding: 36px 12px 8px;
+}
+
+.wishlist-empty-state h3 {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 300;
+  color: var(--charcoal);
+  margin-bottom: 10px;
+}
+
+.wishlist-empty-state p {
+  color: var(--warm-gray);
+  line-height: 1.7;
+  max-width: 420px;
+  margin: 0 auto 26px;
+}
+
+.wishlist-empty-actions {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.wishlist-item-card {
+  flex: 0 0 calc(50% - 12px);
+  scroll-snap-align: start;
+  border: 1px solid var(--border-light);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.86);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.wishlist-card-media {
+  display: block;
+  background: var(--cream);
+}
+
+.wishlist-card-media img {
+  width: 100%;
+  aspect-ratio: 1 / 0.92;
+  object-fit: cover;
+  display: block;
+}
+
+.wishlist-card-body {
+  padding: 18px 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.wishlist-card-kicker-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.wishlist-card-kicker {
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+
+.wishlist-stock-pill {
+  padding: 4px 9px;
+  border-radius: 999px;
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  border: 1px solid rgba(43, 43, 43, 0.1);
+  color: var(--warm-gray);
+  background: rgba(43, 43, 43, 0.03);
+}
+
+.wishlist-stock-pill.low {
+  color: #b07a28;
+  background: rgba(215, 163, 115, 0.1);
+  border-color: rgba(212, 163, 115, 0.22);
+}
+
+.wishlist-stock-pill.out {
+  color: #b84b4b;
+  background: rgba(184, 75, 75, 0.08);
+  border-color: rgba(184, 75, 75, 0.18);
+}
+
+.wishlist-card-title {
+  font-family: var(--font-display);
+  font-size: 1.45rem;
+  font-weight: 400;
+  color: var(--charcoal);
+  line-height: 1.18;
+}
+
+.wishlist-card-title a {
+  color: inherit;
+}
+
+.wishlist-card-desc {
+  color: var(--charcoal-soft);
+  line-height: 1.65;
+  font-size: 0.95rem;
+}
+
+.wishlist-card-price-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.wishlist-card-price {
+  font-family: var(--font-display);
+  font-size: 1.55rem;
+  color: var(--charcoal);
+}
+
+.wishlist-card-note {
+  font-size: 0.8rem;
+  color: var(--warm-gray);
+}
+
+.wishlist-card-actions {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 10px;
+}
+
+.wishlist-view-btn,
+.wishlist-move-btn,
+.wishlist-remove-btn {
+  padding: 11px 14px;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.wishlist-view-btn {
+  text-align: center;
+}
+
+.wishlist-move-btn[disabled] {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
 @media (max-width: 768px) {
   .horizontal-scroll-container > .product-card {
     flex: 0 0 85%; /* Shows 1 card and a sliver of the next on mobile */
   }
+
+  .wishlist-meta-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .wishlist-item-card {
+    flex: 0 0 88%;
+  }
+
+  .wishlist-card-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .wishlist-view-btn,
+  .wishlist-move-btn,
+  .wishlist-remove-btn {
+    width: 100%;
+  }
 }
 @media (max-width: 768px) {
   #orderHistoryContainer {
-    max-height: none;
-    overflow-y: visible;
-    padding-right: 0;
+    max-height: 72vh;
+    overflow-y: auto;
+    padding-right: 6px;
   }
 
   .account-container {

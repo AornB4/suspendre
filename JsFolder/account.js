@@ -238,15 +238,34 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 async function renderWishlist() {
   const container = document.getElementById('wishlistContainer');
+  const countBadge = document.getElementById('wishlistCountBadge');
+  const subcopy = document.getElementById('wishlistSubcopy');
   if (!container) return;
   const wishlistIds = await Auth.getWishlistIds();
+  const wishlistProducts = wishlistIds
+    .map(id => ProductData.getById(id))
+    .filter(Boolean);
 
-  if (wishlistIds.length === 0) {
+  if (countBadge) {
+    countBadge.textContent = `${wishlistProducts.length} saved`;
+  }
+
+  if (subcopy) {
+    subcopy.textContent = wishlistProducts.length
+      ? 'Pieces you set aside for a more considered wardrobe decision.'
+      : 'Saved pieces for a future wardrobe decision.';
+  }
+
+  if (wishlistProducts.length === 0) {
     container.style.display = 'block';
     container.innerHTML = `
-      <div class="empty-orders">
-        <p style="margin-bottom:24px;">Your wishlist is empty.</p>
-        <a href="shop.html" class="btn-primary" style="padding:12px 24px; display:inline-block;">Discover Favorites</a>
+      <div class="wishlist-empty-state">
+        <h3>Your wishlist is still awaiting its first piece.</h3>
+        <p>Save refined essentials as you browse, then return here when you are ready to move them into your cart.</p>
+        <div class="wishlist-empty-actions">
+          <a href="shop.html" class="btn-primary" style="padding:12px 24px; display:inline-block;">Discover Favorites</a>
+          <a href="shop.html?featured=true" class="btn-outline" style="padding:12px 24px; display:inline-block;">View Featured Pieces</a>
+        </div>
       </div>
     `;
     return;
@@ -255,17 +274,49 @@ async function renderWishlist() {
   container.style.display = 'flex';
   container.innerHTML = '';
 
-  wishlistIds.forEach(id => {
-    const product = ProductData.getById(id);
-    if (!product) return;
-    
-    const card = buildProductCard(product);
+  wishlistProducts.forEach(product => {
     const actionBar = document.createElement('div');
     actionBar.className = 'wishlist-card-actions';
 
+    const outOfStock = product.stock <= 0;
+    const lowStock = product.stock > 0 && product.stock <= 3;
+    const stockLabel = outOfStock ? 'Sold Out' : lowStock ? `Only ${product.stock} Left` : 'In Stock';
+    const stockClass = outOfStock ? 'out' : lowStock ? 'low' : '';
+    const noteLabel = outOfStock
+      ? 'This piece is currently unavailable for cart movement.'
+      : lowStock
+        ? 'Low availability. Consider securing it soon.'
+        : 'Saved to your account for a future decision.';
+
+    const card = document.createElement('article');
+    card.className = 'wishlist-item-card';
+    card.innerHTML = `
+      <a class="wishlist-card-media" href="product.html?id=${product.id}">
+        <img src="${ProductData.getImageSrc(product)}" alt="${product.name}" loading="lazy" onerror="this.onerror=null;this.src='./images/placeholder.svg'">
+      </a>
+      <div class="wishlist-card-body">
+        <div class="wishlist-card-kicker-row">
+          <span class="wishlist-card-kicker">${String(product.category || '').toUpperCase()}</span>
+          <span class="wishlist-stock-pill ${stockClass}">${stockLabel}</span>
+        </div>
+        <div class="wishlist-card-title"><a href="product.html?id=${product.id}">${product.name}</a></div>
+        <p class="wishlist-card-desc">${product.description}</p>
+        <div class="wishlist-card-price-row">
+          <strong class="wishlist-card-price">${formatPrice(product.price)}</strong>
+          <span class="wishlist-card-note">${noteLabel}</span>
+        </div>
+      </div>
+    `;
+
+    const viewBtn = document.createElement('a');
+    viewBtn.className = 'btn-outline wishlist-view-btn';
+    viewBtn.href = `product.html?id=${product.id}`;
+    viewBtn.textContent = 'View Product';
+
     const moveBtn = document.createElement('button');
     moveBtn.className = 'btn-primary wishlist-move-btn';
-    moveBtn.textContent = 'Move to Cart';
+    moveBtn.textContent = outOfStock ? 'Sold Out' : 'Move to Cart';
+    moveBtn.disabled = outOfStock;
 
     const removeBtn = document.createElement('button');
     removeBtn.className = 'btn-outline wishlist-remove-btn';
@@ -300,8 +351,8 @@ async function renderWishlist() {
       renderWishlist();
     });
 
-    actionBar.append(moveBtn, removeBtn);
-    card.appendChild(actionBar);
+    actionBar.append(viewBtn, moveBtn, removeBtn);
+    card.querySelector('.wishlist-card-body')?.appendChild(actionBar);
     container.appendChild(card);
   });
 }
