@@ -927,6 +927,170 @@ const Orders = {
   }
 };
 
+// ===== BACK-IN-STOCK REQUESTS =====
+const RestockRequests = {
+  requestedIds: new Set(),
+  demandCounts: new Map(),
+
+  getClient() {
+    const db = window.SUSPENDRE_SUPABASE;
+    if (!db || !db.isConfigured()) return null;
+    return db.getClient();
+  },
+
+  reset() {
+    this.requestedIds = new Set();
+    this.demandCounts = new Map();
+  },
+
+  async fetchRequestedIds(userId) {
+    const client = this.getClient();
+    if (!client || !userId) return [];
+
+    const { data, error } = await client
+      .from('back_in_stock_requests')
+      .select('product_id')
+      .eq('user_id', userId);
+
+    if (error) {
+      console.error('Failed to load back-in-stock requests.', error);
+      return [];
+    }
+
+    return (data || [])
+      .map((row) => {
+        const product = ProductData.getById(row.product_id);
+        return product ? product.id : null;
+      })
+      .filter(Boolean);
+  },
+
+  async refreshRequestedIds() {
+    const currentUser = Auth.getCurrentUser();
+    if (!currentUser) {
+      this.requestedIds = new Set();
+      return [];
+    }
+
+    await ProductData.ready();
+    const ids = await this.fetchRequestedIds(currentUser.id);
+    this.requestedIds = new Set(ids);
+    return [...ids];
+  },
+
+  async getRequestedIds() {
+    if (!Auth.isLoggedIn()) return [];
+    if (this.requestedIds.size === 0) {
+      return this.refreshRequestedIds();
+    }
+    return [...this.requestedIds];
+  },
+
+  hasRequested(productId) {
+    return this.requestedIds.has(productId);
+  },
+
+  async request(productId) {
+    const client = this.getClient();
+    const currentUser = Auth.getCurrentUser();
+    if (!client || !currentUser) {
+      return { success: false, message: 'Please login to request a restock alert.' };
+    }
+
+    await ProductData.ready();
+    const product = ProductData.getById(productId);
+    if (!product) {
+      return { success: false, message: 'Product not found.' };
+    }
+
+    const { error } = await client
+      .from('back_in_stock_requests')
+      .upsert({
+        user_id: currentUser.id,
+        product_id: product.dbId,
+        email_snapshot: currentUser.email || ''
+      }, { onConflict: 'user_id,product_id' });
+
+    if (error) {
+      return { success: false, message: error.message || 'Could not save your restock request.', error };
+    }
+
+    this.requestedIds.add(product.id);
+    const currentCount = this.demandCounts.get(product.id) || 0;
+    this.demandCounts.set(product.id, currentCount + 1);
+    return { success: true };
+  },
+
+  async remove(productId) {
+    const client = this.getClient();
+    const currentUser = Auth.getCurrentUser();
+    if (!client || !currentUser) {
+      return { success: false, message: 'Please login to manage your restock request.' };
+    }
+
+    await ProductData.ready();
+    const product = ProductData.getById(productId);
+    if (!product) {
+      return { success: false, message: 'Product not found.' };
+    }
+
+    const { error } = await client
+      .from('back_in_stock_requests')
+      .delete()
+      .eq('user_id', currentUser.id)
+      .eq('product_id', product.dbId);
+
+    if (error) {
+      return { success: false, message: error.message || 'Could not update your restock request.', error };
+    }
+
+    this.requestedIds.delete(product.id);
+    const currentCount = this.demandCounts.get(product.id) || 0;
+    this.demandCounts.set(product.id, Math.max(0, currentCount - 1));
+    return { success: true };
+  },
+
+  async toggle(productId) {
+    if (this.hasRequested(productId)) {
+      const result = await this.remove(productId);
+      return { ...result, requested: false };
+    }
+    const result = await this.request(productId);
+    return { ...result, requested: true };
+  },
+
+  async getDemandCounts(forceRefresh = false) {
+    const client = this.getClient();
+    if (!client) return new Map();
+    if (!forceRefresh && this.demandCounts.size > 0) return new Map(this.demandCounts);
+
+    await ProductData.ready();
+    const { data, error } = await client
+      .from('back_in_stock_requests')
+      .select('product_id');
+
+    if (error) {
+      console.error('Failed to load restock demand counts.', error);
+      return new Map();
+    }
+
+    const counts = new Map();
+    (data || []).forEach((row) => {
+      const product = ProductData.getById(row.product_id);
+      const key = product ? product.id : null;
+      if (!key) return;
+      counts.set(key, (counts.get(key) || 0) + 1);
+    });
+
+    this.demandCounts = counts;
+    return new Map(counts);
+  }
+};
+
+window.addEventListener('suspendre:auth-ready', () => {
+  RestockRequests.reset();
+});
+
 // ===== UI UTILITIES =====
 function showToast(message, type = 'default', duration = 3000) {
   const toast = document.getElementById('toast');

@@ -257,12 +257,24 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   const stockEl = document.getElementById('pdpStockStatus');
   const btnAdd = document.getElementById('pdpAddBtn');
+  let restockRequested = false;
+
+  function syncRestockButtonState() {
+    if (product.stock > 0) return;
+    btnAdd.disabled = false;
+    btnAdd.textContent = restockRequested ? 'Alert Requested' : 'Notify Me';
+    btnAdd.classList.toggle('btn-outline', restockRequested);
+    btnAdd.classList.toggle('btn-primary', !restockRequested);
+  }
 
   if (product.stock <= 0) {
     stockEl.textContent = 'Out of Stock';
     stockEl.className = 'pdp-stock-status out-of-stock';
-    btnAdd.textContent = 'Sold Out';
-    btnAdd.disabled = true;
+    if (Auth.isLoggedIn()) {
+      const requestedIds = await RestockRequests.getRequestedIds();
+      restockRequested = requestedIds.includes(product.id);
+    }
+    syncRestockButtonState();
   } else if (product.stock <= 5) {
     stockEl.textContent = `Only ${product.stock} left in stock — Order soon`;
     stockEl.className = 'pdp-stock-status low-stock';
@@ -272,7 +284,31 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   btnAdd.addEventListener('click', () => {
-    if (product.stock <= 0) return;
+    if (product.stock <= 0) {
+      if (!Auth.isLoggedIn()) {
+        showToast('Please login to request a restock alert.', 'error');
+        setTimeout(() => window.location.href = 'login.html', 1500);
+        return;
+      }
+
+      void (async () => {
+        const result = await RestockRequests.toggle(product.id);
+        if (!result.success) {
+          showToast(result.message || 'Could not update your restock alert.', 'error');
+          return;
+        }
+
+        restockRequested = !!result.requested;
+        syncRestockButtonState();
+        showToast(
+          restockRequested
+            ? `${product.name} will stay on your radar for restock.`
+            : `Restock alert removed for ${product.name}.`
+        );
+      })();
+      return;
+    }
+
     const added = Cart.addItem(product.id);
     if (added) {
       btnAdd.textContent = '\u2713 Added to Cart';

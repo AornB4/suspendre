@@ -14,12 +14,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   await Orders.ready();
 
   if (!Auth.requireAdmin()) return;
+  await RestockRequests.getDemandCounts(true);
 
   initAdminNav();
   initProductForm();
   initOrderControls();
   await renderDashboard();
-  renderProducts();
+  await renderProducts();
   renderAllOrders();
 });
 
@@ -120,11 +121,12 @@ async function renderDashboard() {
 }
 
 // ===== PRODUCT LIST =====
-function renderProducts() {
+async function renderProducts() {
   const listEl = document.getElementById('adminProductsList');
   if (!listEl) return;
 
   const products = ProductData.getAll();
+  const demandCounts = await RestockRequests.getDemandCounts(true);
   listEl.innerHTML = '';
 
   if (products.length === 0) {
@@ -162,6 +164,11 @@ function renderProducts() {
     stockDiv.className = `admin-product-stock ${stockClass}`;
     stockDiv.textContent = `Stock: ${product.stock}`;
 
+    const demandDiv = document.createElement('div');
+    const demandCount = demandCounts.get(product.id) || 0;
+    demandDiv.className = `admin-product-demand ${demandCount > 0 ? 'active' : ''}`;
+    demandDiv.textContent = demandCount > 0 ? `${demandCount} alert${demandCount === 1 ? '' : 's'}` : 'No alerts';
+
     const editBtn = document.createElement('button');
     editBtn.className = 'btn-edit';
     editBtn.dataset.id = product.id;
@@ -174,7 +181,7 @@ function renderProducts() {
     delBtn.textContent = 'Delete';
     delBtn.addEventListener('click', () => openDeleteModal(product.id));
 
-    row.append(img, infoDiv, priceDiv, stockDiv, editBtn, delBtn);
+    row.append(img, infoDiv, priceDiv, stockDiv, demandDiv, editBtn, delBtn);
     listEl.appendChild(row);
   });
 }
@@ -369,7 +376,7 @@ async function saveProduct() {
 
   clearForm();
   await ProductData.ready();
-  renderProducts();
+  await renderProducts();
   await renderDashboard();
 
   if (saveBtn) {
@@ -414,7 +421,7 @@ async function confirmDelete() {
   pendingDeleteId = null;
   closeDeleteModal();
   await ProductData.ready();
-  renderProducts();
+  await renderProducts();
   await renderDashboard();
   showToast(product ? `"${product.name}" deleted.` : 'Product deleted.', 'success');
 }

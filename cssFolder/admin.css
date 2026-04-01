@@ -149,7 +149,7 @@ body { background: #F2EEE6; }
 
 /* ===== ADMIN PRODUCTS ===== */
 .admin-product-row {
-  display: grid; grid-template-columns: 80px 1fr auto auto auto auto;
+  display: grid; grid-template-columns: 80px 1fr auto auto auto auto auto;
   gap: 20px; align-items: center;
   padding: 16px 0; border-bottom: 1px solid var(--border-light);
   font-size: 13px;
@@ -170,6 +170,21 @@ body { background: #F2EEE6; }
 .admin-product-stock { color: var(--warm-gray); }
 .admin-product-stock.low { color: #e67e22; }
 .admin-product-stock.out { color: #c0392b; }
+.admin-product-demand {
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--warm-gray);
+  padding: 7px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(43, 43, 43, 0.08);
+  background: rgba(43, 43, 43, 0.03);
+}
+.admin-product-demand.active {
+  color: #8c6a16;
+  border-color: rgba(176, 138, 42, 0.24);
+  background: rgba(215, 187, 114, 0.14);
+}
 
 .btn-edit {
   padding: 8px 16px; border: 1px solid var(--charcoal);
@@ -424,7 +439,7 @@ body { background: #F2EEE6; }
 
 @media (max-width: 1024px) {
   .stats-grid { grid-template-columns: repeat(2, 1fr); }
-  .admin-product-row { grid-template-columns: 60px 1fr auto auto; }
+  .admin-product-row { grid-template-columns: 60px 1fr auto auto auto; }
   .admin-product-price, .admin-product-stock { display: none; }
   .admin-order-toolbar {
     grid-template-columns: 1fr 1fr;

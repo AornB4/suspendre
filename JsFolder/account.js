@@ -241,6 +241,7 @@ async function renderWishlist() {
   const countBadge = document.getElementById('wishlistCountBadge');
   const subcopy = document.getElementById('wishlistSubcopy');
   if (!container) return;
+  await RestockRequests.refreshRequestedIds();
   const wishlistIds = await Auth.getWishlistIds();
   const wishlistProducts = wishlistIds
     .map(id => ProductData.getById(id))
@@ -314,15 +315,34 @@ async function renderWishlist() {
     viewBtn.textContent = 'View Product';
 
     const moveBtn = document.createElement('button');
-    moveBtn.className = 'btn-primary wishlist-move-btn';
-    moveBtn.textContent = outOfStock ? 'Sold Out' : 'Move to Cart';
-    moveBtn.disabled = outOfStock;
+    moveBtn.className = outOfStock && RestockRequests.hasRequested(product.id)
+      ? 'btn-outline wishlist-move-btn'
+      : 'btn-primary wishlist-move-btn';
+    moveBtn.textContent = outOfStock
+      ? (RestockRequests.hasRequested(product.id) ? 'Alert Requested' : 'Notify Me')
+      : 'Move to Cart';
 
     const removeBtn = document.createElement('button');
     removeBtn.className = 'btn-outline wishlist-remove-btn';
     removeBtn.textContent = 'Remove';
 
     moveBtn.addEventListener('click', async () => {
+      if (outOfStock) {
+        const result = await RestockRequests.toggle(product.id);
+        if (!result.success) {
+          showToast(result.message || 'Could not update your restock alert.', 'error');
+          return;
+        }
+
+        showToast(
+          result.requested
+            ? `${product.name} will stay on your radar for restock.`
+            : `Restock alert removed for ${product.name}.`
+        );
+        renderWishlist();
+        return;
+      }
+
       const added = Cart.addItem(product.id);
       if (!added) {
         showToast('Could not move this item to cart.', 'error');
