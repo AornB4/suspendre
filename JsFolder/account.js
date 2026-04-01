@@ -369,6 +369,132 @@ async function renderOrderHistory(userId) {
   });
 }
 
+function formatTitleCase(value, fallback) {
+  const raw = String(value || fallback || '').trim();
+  if (!raw) return fallback || '';
+  return raw
+    .replace(/[_-]+/g, ' ')
+    .split(' ')
+    .filter(Boolean)
+    .map(part => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+    .join(' ');
+}
+
+function getOrderStatusMeta(status) {
+  const normalized = String(status || '').toLowerCase();
+
+  if (normalized === 'shipped') return { label: 'Shipped', className: 'status-shipped' };
+  if (normalized === 'cancelled') return { label: 'Cancelled', className: 'status-cancelled' };
+  if (normalized === 'paid') return { label: 'Paid', className: 'status-paid' };
+  if (normalized === 'pending') return { label: 'Pending', className: 'status-pending' };
+
+  return {
+    label: formatTitleCase(status, 'Processing'),
+    className: 'status-processing'
+  };
+}
+
+function getPaymentStatusMeta(status) {
+  const normalized = String(status || '').toLowerCase();
+
+  if (normalized === 'paid') return { label: 'Payment Confirmed', className: 'status-paid' };
+  if (normalized === 'failed') return { label: 'Payment Failed', className: 'status-cancelled' };
+  if (normalized === 'refunded') return { label: 'Refunded', className: 'status-pending' };
+
+  return {
+    label: formatTitleCase(status, 'Payment Pending'),
+    className: 'status-pending'
+  };
+}
+
+function formatPaymentMethodLabel(method) {
+  const normalized = String(method || '').toLowerCase();
+  if (!normalized) return 'Not recorded';
+  if (normalized === 'paypal') return 'PayPal';
+  if (normalized === 'manual') return 'Manual';
+  return formatTitleCase(method, 'Not recorded');
+}
+
+async function renderOrderHistory(userId) {
+  const container = document.getElementById('orderHistoryContainer');
+
+  const allOrders = Orders.getAll();
+  const userOrders = allOrders
+    .filter(order => order.userId === userId)
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+  if (userOrders.length === 0) {
+    container.innerHTML = `
+      <div class="empty-orders">
+        <p style="margin-bottom:24px;">You haven't placed any orders yet.</p>
+        <a href="shop.html" class="btn-primary" style="padding:12px 24px; display:inline-block;">Explore the Collection</a>
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = '';
+
+  userOrders.forEach((order) => {
+    const fulfillmentMeta = getOrderStatusMeta(order.status);
+    const paymentMeta = getPaymentStatusMeta(order.paymentStatus);
+    const itemCount = Array.isArray(order.items)
+      ? order.items.reduce((sum, item) => sum + (Number(item.qty) || 0), 0)
+      : 0;
+
+    const orderEl = document.createElement('div');
+    orderEl.className = 'order-item';
+
+    const safeString = (str) => str ? str.replace(/</g, '&lt;').replace(/>/g, '&gt;') : '';
+    let productsHtml = '';
+
+    order.items.forEach((item) => {
+      productsHtml += `<div class="order-product-line">${safeString(item.name)} <span>x ${item.qty}</span></div>`;
+    });
+
+    orderEl.innerHTML = `
+      <div class="order-header">
+        <div class="order-header-main">
+          <span class="order-id">${safeString(order.id)}</span>
+          <div class="order-status-row">
+            <span class="order-status ${fulfillmentMeta.className}">${fulfillmentMeta.label}</span>
+            <span class="order-status ${paymentMeta.className}">${paymentMeta.label}</span>
+          </div>
+        </div>
+        <div class="order-header-side">
+          <span class="order-date">${formatDate(order.createdAt)}</span>
+          <span class="order-item-count">${itemCount} item${itemCount === 1 ? '' : 's'}</span>
+        </div>
+      </div>
+      <div class="order-meta-grid">
+        <div class="order-meta-card">
+          <span class="order-meta-label">Fulfillment</span>
+          <span class="order-meta-value">${fulfillmentMeta.label}</span>
+        </div>
+        <div class="order-meta-card">
+          <span class="order-meta-label">Payment</span>
+          <span class="order-meta-value">${paymentMeta.label}</span>
+        </div>
+        <div class="order-meta-card">
+          <span class="order-meta-label">Method</span>
+          <span class="order-meta-value">${safeString(formatPaymentMethodLabel(order.paymentMethod))}</span>
+        </div>
+      </div>
+      <div class="order-details">
+        <div class="order-products">
+          ${productsHtml}
+        </div>
+        <div class="order-actions">
+          <span class="order-total">${formatPrice(order.total)}</span>
+          <span class="order-support-copy">Saved to your account for reorder and support follow-up.</span>
+          <button class="btn-reorder" onclick="reorder('${safeString(order.id)}')">Buy Again</button>
+        </div>
+      </div>
+    `;
+    container.appendChild(orderEl);
+  });
+}
+
 // Global function to attach to inline onclick
 window.reorder = function(orderId) {
   const order = Orders.getById(orderId);
