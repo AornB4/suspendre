@@ -49,7 +49,7 @@
       <p id="welcomeMessage">Welcome back.</p>
     </header>
 
-    <section class="account-overview-card">
+    <section class="account-overview-card" id="accountOverviewSection">
       <div class="account-overview-heading">
         <div>
           <span class="account-overview-kicker">At a Glance</span>
@@ -65,7 +65,7 @@
             </span>
             <span>Continue Shopping</span>
           </a>
-          <a href="#wishlistContainer" class="btn-outline account-overview-btn">
+          <a href="#wishlistSection" class="btn-outline account-overview-btn">
             <span class="account-overview-btn-icon" aria-hidden="true">
               <svg viewBox="0 0 24 24" width="14" height="14">
                 <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"></path>
@@ -120,11 +120,54 @@
           <p id="overviewLatestStatusCopy">Place a first order to begin your Suspendre history.</p>
         </article>
       </div>
+      <div class="account-utility-strip">
+        <div class="account-utility-copy">
+          <span class="account-utility-kicker">Quick Access</span>
+          <p id="accountUtilityStatus">Move through your account quickly with the shortcuts below.</p>
+        </div>
+        <div class="account-utility-actions">
+          <button class="btn-outline account-utility-btn" type="button" data-account-target="orderHistorySection">
+            <span class="account-utility-btn-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="14" height="14">
+                <path d="M7 3h10a2 2 0 0 1 2 2v15l-2-1-2 1-2-1-2 1-2-1-2 1V5a2 2 0 0 1 2-2Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"></path>
+                <path d="M9 8h6M9 12h6M9 16h4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path>
+              </svg>
+            </span>
+            <span>Orders</span>
+          </button>
+          <button class="btn-outline account-utility-btn" type="button" data-account-target="wishlistSection">
+            <span class="account-utility-btn-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="14" height="14">
+                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"></path>
+              </svg>
+            </span>
+            <span>Wishlist</span>
+          </button>
+          <button class="btn-outline account-utility-btn" type="button" data-account-target="profileInformationCard" data-account-expand="address">
+            <span class="account-utility-btn-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="14" height="14">
+                <path d="M12 21s7-5.7 7-11a7 7 0 1 0-14 0c0 5.3 7 11 7 11Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"></path>
+                <circle cx="12" cy="10" r="2.5" fill="none" stroke="currentColor" stroke-width="1.8"></circle>
+              </svg>
+            </span>
+            <span>Addresses</span>
+          </button>
+          <button class="btn-outline account-utility-btn" type="button" data-account-target="profileInformationCard" data-account-expand="preferences">
+            <span class="account-utility-btn-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="14" height="14">
+                <path d="M12 4v16M4 12h16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path>
+                <circle cx="12" cy="12" r="7" fill="none" stroke="currentColor" stroke-width="1.8"></circle>
+              </svg>
+            </span>
+            <span>Preferences</span>
+          </button>
+        </div>
+      </div>
     </section>
 
     <div class="account-grid">
       <!-- Profile Info -->
-      <section class="account-card">
+      <section class="account-card" id="profileInformationCard">
         <h2>Profile Information</h2>
         <div class="info-block">
           <div class="info-block-heading">
@@ -269,14 +312,14 @@
 
       <!-- Right Column: Orders & Wishlist -->
       <div class="account-right-col" style="display:flex; flex-direction:column; gap:48px;">
-        <section class="account-card recent-activity-card">
+        <section class="account-card recent-activity-card" id="recentActivitySection">
           <h2>Recent Activity</h2>
           <div id="recentActivityContainer" class="recent-activity-list">
             <div class="loading-state" style="text-align:center; padding:28px 0;">Compiling your recent account activity...</div>
           </div>
         </section>
         <!-- Order History -->
-        <section class="account-card order-history-card">
+        <section class="account-card order-history-card" id="orderHistorySection">
           <h2>Order History</h2>
           <div id="orderHistoryContainer">
             <!-- Orders rendered here -->
@@ -286,7 +329,7 @@
         </section>
 
         <!-- Wishlist -->
-        <section class="account-card wishlist-card">
+        <section class="account-card wishlist-card" id="wishlistSection">
           <h2>My Wishlist</h2>
           <div class="wishlist-meta-row">
             <p id="wishlistSubcopy" class="wishlist-subcopy">Saved pieces for a future wardrobe decision.</p>

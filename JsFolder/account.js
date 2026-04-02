@@ -43,6 +43,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   const conciergePersonalizationInput = document.getElementById('conciergePersonalizationInput');
   const savePreferencesBtn = document.getElementById('savePreferencesBtn');
   const recentActivityContainer = document.getElementById('recentActivityContainer');
+  const accountUtilityStatus = document.getElementById('accountUtilityStatus');
+  const accountUtilityButtons = Array.from(document.querySelectorAll('[data-account-target]'));
 
   const overviewOrdersCount = document.getElementById('overviewOrdersCount');
   const overviewOrdersCopy = document.getElementById('overviewOrdersCopy');
@@ -69,6 +71,27 @@ document.addEventListener('DOMContentLoaded', async () => {
   function toggleCollapsible(toggle, content) {
     const isExpanded = toggle?.getAttribute('aria-expanded') === 'true';
     setCollapsibleState(toggle, content, !isExpanded);
+  }
+
+  function scrollToAccountSection(targetId, options = {}) {
+    const target = document.getElementById(targetId);
+    if (!target) return;
+
+    if (options.expand === 'address') {
+      setCollapsibleState(addressBookToggle, addressBookSectionContent, true);
+    }
+
+    if (options.expand === 'preferences') {
+      setCollapsibleState(preferencesSectionToggle, preferencesSectionContent, true);
+    }
+
+    if (options.expand === 'password') {
+      setCollapsibleState(passwordSectionToggle, passwordSectionContent, true);
+    }
+
+    window.requestAnimationFrame(() => {
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
   }
 
   function refreshUser() {
@@ -225,6 +248,18 @@ document.addEventListener('DOMContentLoaded', async () => {
       overviewLatestStatusCopy.textContent = latestOrder
         ? `${latestOrder.items.length} line item${latestOrder.items.length === 1 ? '' : 's'} in your latest order.`
         : 'Place a first order to begin your Suspendre history.';
+    }
+
+    if (accountUtilityStatus) {
+      if (latestOrder) {
+        accountUtilityStatus.textContent = `Your latest order is ${getOrderStatusMeta(latestOrder.status).label.toLowerCase()} and your profile is ready for another checkout.`;
+      } else if (context.wishlistProducts.length) {
+        accountUtilityStatus.textContent = `You still have ${context.wishlistProducts.length} saved piece${context.wishlistProducts.length === 1 ? '' : 's'} waiting in your shortlist.`;
+      } else if (primaryAddress) {
+        accountUtilityStatus.textContent = `Your primary address is set to ${primaryAddress.label}, so future orders can move faster.`;
+      } else {
+        accountUtilityStatus.textContent = 'Move through your account quickly with the shortcuts below.';
+      }
     }
   }
 
@@ -448,6 +483,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   setCollapsibleState(addressBookToggle, addressBookSectionContent, false);
   setCollapsibleState(passwordSectionToggle, passwordSectionContent, false);
   setCollapsibleState(preferencesSectionToggle, preferencesSectionContent, false);
+
+  accountUtilityButtons.forEach((button) => {
+    button.addEventListener('click', () => {
+      scrollToAccountSection(button.dataset.accountTarget, {
+        expand: button.dataset.accountExpand || ''
+      });
+    });
+  });
 
   addressBookToggle?.addEventListener('click', () => toggleCollapsible(addressBookToggle, addressBookSectionContent));
   passwordSectionToggle?.addEventListener('click', () => toggleCollapsible(passwordSectionToggle, passwordSectionContent));
