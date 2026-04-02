@@ -140,6 +140,44 @@ const ProductData = {
       .replace(/-{2,}/g, '-');
   },
 
+  isUuid(value) {
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value || ''));
+  },
+
+  async findRemoteRecord(client, id) {
+    if (!client || !id) return { data: null, error: null };
+
+    const selectFields = 'id, legacy_id, slug, name, category, price, stock, description, image_url, featured, active, created_at';
+    const lookupSteps = this.isUuid(id)
+      ? [
+          { column: 'id', value: id },
+          { column: 'legacy_id', value: id },
+          { column: 'slug', value: id }
+        ]
+      : [
+          { column: 'legacy_id', value: id },
+          { column: 'slug', value: id }
+        ];
+
+    for (const step of lookupSteps) {
+      const { data, error } = await client
+        .from('products')
+        .select(selectFields)
+        .eq(step.column, step.value)
+        .maybeSingle();
+
+      if (error) {
+        return { data: null, error };
+      }
+
+      if (data) {
+        return { data, error: null };
+      }
+    }
+
+    return { data: null, error: null };
+  },
+
   normalizeRecord(product) {
     const resolvedId = product.legacy_id || product.id;
     return {
@@ -281,7 +319,7 @@ const ProductData = {
       description: product.description,
       image_url: this.normalizeImage(product.image),
       featured: !!product.featured,
-      active: true
+      active: typeof product.active === 'boolean' ? product.active : true
     };
 
     const { data, error } = await client
@@ -302,16 +340,14 @@ const ProductData = {
   },
 
   async update(id, updates, options = {}) {
+    const client = this.getClient();
     const index = this.cache.findIndex(product =>
       product.id === id || product.dbId === id || product.legacyId === id
     );
-
-    if (index === -1) return { success: false, message: 'Product not found.' };
-
-    const existing = this.cache[index];
-    const client = this.getClient();
+    let existing = index === -1 ? null : this.cache[index];
 
     if (!this.shouldUseRemoteWrite(options) || !client) {
+      if (!existing) return { success: false, message: 'Product not found.' };
       const merged = this.normalizeRecord({
         ...existing,
         ...updates,
@@ -324,6 +360,16 @@ const ProductData = {
       return { success: true, product: { ...merged } };
     }
 
+    if (!existing) {
+      const { data: existingData, error: existingError } = await this.findRemoteRecord(client, id);
+
+      if (existingError || !existingData) {
+        return { success: false, message: existingError?.message || 'Product not found.', error: existingError };
+      }
+
+      existing = this.normalizeRecord(existingData);
+    }
+
     const payload = {
       slug: this.slugify(updates.slug || updates.name || existing.slug || existing.name),
       name: updates.name ?? existing.name,
@@ -332,7 +378,8 @@ const ProductData = {
       stock: Number(updates.stock ?? existing.stock),
       description: updates.description ?? existing.description,
       image_url: this.normalizeImage(updates.image ?? existing.image),
-      featured: typeof updates.featured === 'boolean' ? updates.featured : existing.featured
+      featured: typeof updates.featured === 'boolean' ? updates.featured : existing.featured,
+      active: typeof updates.active === 'boolean' ? updates.active : existing.active
     };
 
     const { data, error } = await client
@@ -346,23 +393,37 @@ const ProductData = {
       return { success: false, message: error.message, error };
     }
 
-    this.cache[index] = this.normalizeRecord(data);
+    const normalized = this.normalizeRecord(data);
+    if (index === -1) {
+      this.cache.push(normalized);
+    } else {
+      this.cache[index] = normalized;
+    }
     this.persistCache();
     await this.refresh();
-    return { success: true, product: { ...this.getById(existing.id) } };
+    return { success: true, product: { ...this.getById(normalized.id) } };
   },
 
   async delete(id, options = {}) {
-    const product = this.getById(id);
-    if (!product) return { success: false, message: 'Product not found.' };
-
     const client = this.getClient();
+    let product = this.getById(id);
     if (!this.shouldUseRemoteWrite(options) || !client) {
+      if (!product) return { success: false, message: 'Product not found.' };
       this.cache = this.cache.filter(entry =>
         entry.id !== id && entry.dbId !== id && entry.legacyId !== id
       );
       this.persistCache();
       return { success: true };
+    }
+
+    if (!product) {
+      const { data: existingData, error: existingError } = await this.findRemoteRecord(client, id);
+
+      if (existingError || !existingData) {
+        return { success: false, message: existingError?.message || 'Product not found.', error: existingError };
+      }
+
+      product = this.normalizeRecord(existingData);
     }
 
     const { error } = await client

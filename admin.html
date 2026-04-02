@@ -50,6 +50,9 @@
         <a href="#" class="admin-nav-item" data-tab="orders">
           <span class="nav-icon">◎</span> Orders
         </a>
+        <a href="#" class="admin-nav-item" data-tab="faqs">
+          <span class="nav-icon">✕</span> FAQs
+        </a>
         <a href="#" class="admin-nav-item" data-tab="add-product">
           <span class="nav-icon">✦</span> Add Product
         </a>
@@ -137,6 +140,108 @@
         <div id="allOrdersList"></div>
       </div>
 
+      <!-- FAQs Tab -->
+      <div class="admin-tab" id="tab-faqs">
+        <div class="admin-page-header">
+          <h1>FAQs</h1>
+          <p>Manage the answers used across the homepage and Atelier.</p>
+        </div>
+        <div class="admin-faq-layout">
+          <section class="admin-faq-list-card">
+            <div class="admin-faq-toolbar">
+              <div>
+                <span class="admin-order-section-label">Knowledge Base</span>
+                <h2>Current Questions</h2>
+              </div>
+              <div class="admin-faq-toolbar-actions">
+                <label class="admin-order-filter admin-faq-filter">
+                  <span>Visibility</span>
+                  <select id="adminFaqVisibilityFilter">
+                    <option value="all">All FAQs</option>
+                    <option value="published">Published</option>
+                    <option value="hidden">Hidden drafts</option>
+                  </select>
+                </label>
+                <div class="admin-order-results" id="adminFaqResultsCount">0 FAQs</div>
+                <button class="btn-outline" id="newFaqBtn" type="button">New FAQ</button>
+              </div>
+            </div>
+            <div class="admin-faq-notice" id="adminFaqHomepageNotice">
+              <strong>Homepage curation</strong>
+              <span>The homepage currently surfaces the first 4 published FAQs by position.</span>
+            </div>
+            <div class="admin-faq-list" id="adminFaqList"></div>
+          </section>
+
+          <section class="admin-faq-form-card">
+            <div class="admin-faq-form-header">
+              <div>
+                <span class="admin-order-section-label">Editor</span>
+                <h2 id="faqFormTitle">Add New FAQ</h2>
+              </div>
+              <p id="faqFormSubcopy">Write a clear answer that can work both on the homepage and inside Atelier.</p>
+            </div>
+
+            <div class="form-group">
+              <label>Question</label>
+              <input type="text" id="faqQuestion" placeholder="e.g. Do you ship internationally?" />
+            </div>
+
+            <div class="form-group">
+              <label>Category</label>
+              <select id="faqCategory">
+                <option value="products">Products</option>
+                <option value="shipping">Shipping</option>
+                <option value="returns">Returns</option>
+                <option value="payments">Payments</option>
+                <option value="orders">Orders</option>
+                <option value="account">Account</option>
+                <option value="care">Care</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label>Answer</label>
+              <textarea id="faqAnswer" rows="6" placeholder="Compose a concise, premium answer that matches the Suspendre tone."></textarea>
+            </div>
+
+            <div class="form-group">
+              <label>Visibility</label>
+              <input type="hidden" id="faqActive" value="true" />
+              <div class="admin-faq-visibility-switcher" id="faqVisibilitySwitcher">
+                <button class="admin-faq-visibility-choice active" type="button" data-faq-visibility="published">
+                  <span class="admin-faq-choice-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M20 7 9 18l-5-5"/>
+                    </svg>
+                  </span>
+                  <span class="admin-faq-choice-title">Published</span>
+                  <span class="admin-faq-choice-copy">Visible on the homepage and inside Atelier.</span>
+                </button>
+                <button class="admin-faq-visibility-choice" type="button" data-faq-visibility="hidden">
+                  <span class="admin-faq-choice-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M3 3 21 21"/>
+                      <path d="M10.58 10.58a2 2 0 0 0 2.83 2.83"/>
+                      <path d="M9.88 5.09A9.77 9.77 0 0 1 12 5c5 0 9.27 3.11 11 7-.33.73-.74 1.41-1.21 2.05"/>
+                      <path d="M6.61 6.61C4.62 7.88 3.1 9.73 2 12c1.73 3.89 6 7 10 7 1.72 0 3.37-.39 4.84-1.09"/>
+                    </svg>
+                  </span>
+                  <span class="admin-faq-choice-title">Hidden Draft</span>
+                  <span class="admin-faq-choice-copy">Saved for editing only and hidden from the storefront.</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="form-actions">
+              <button class="btn-primary" id="saveFaqBtn" type="button">Save FAQ</button>
+              <button class="btn-outline" id="cancelFaqEditBtn" type="button" style="display:none">Cancel Edit</button>
+            </div>
+            <input type="hidden" id="editFaqId" />
+          </section>
+        </div>
+      </div>
+
       <!-- Add Product Tab -->
       <div class="admin-tab" id="tab-add-product">
         <div class="admin-page-header">
@@ -178,10 +283,62 @@
             <input type="text" id="prodImage" placeholder="https://..." />
           </div>
           <div class="form-group">
+            <label>Storefront Visibility</label>
+            <input type="hidden" id="prodActive" value="true" />
+            <div class="admin-product-visibility-switcher" id="prodVisibilitySwitcher">
+              <button class="admin-product-visibility-choice active" type="button" data-product-visibility="published">
+                <span class="admin-product-choice-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M20 7 9 18l-5-5"/>
+                  </svg>
+                </span>
+                <span class="admin-product-choice-copy">
+                  <strong>Published</strong>
+                  <span>Visible in the shop, product pages, and recommendations.</span>
+                </span>
+              </button>
+              <button class="admin-product-visibility-choice" type="button" data-product-visibility="hidden">
+                <span class="admin-product-choice-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 3 21 21"/>
+                    <path d="M10.58 10.58a2 2 0 0 0 2.83 2.83"/>
+                    <path d="M9.88 5.09A9.77 9.77 0 0 1 12 5c5 0 9.27 3.11 11 7-.33.73-.74 1.41-1.21 2.05"/>
+                    <path d="M6.61 6.61C4.62 7.88 3.1 9.73 2 12c1.73 3.89 6 7 10 7 1.72 0 3.37-.39 4.84-1.09"/>
+                  </svg>
+                </span>
+                <span class="admin-product-choice-copy">
+                  <strong>Hidden Draft</strong>
+                  <span>Saved in the catalog but hidden from the storefront until you publish it.</span>
+                </span>
+              </button>
+            </div>
+          </div>
+          <div class="form-group">
             <label>Featured on Home Page</label>
-            <div class="toggle-row">
-              <input type="checkbox" id="prodFeatured" class="toggle-checkbox" />
-              <label for="prodFeatured" class="toggle-label">Show on landing page</label>
+            <input type="hidden" id="prodFeatured" value="false" />
+            <div class="admin-product-feature-switcher" id="prodFeaturedSwitcher">
+              <button class="admin-product-feature-choice active" type="button" data-product-featured="false">
+                <span class="admin-product-choice-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M5 12h14"/>
+                  </svg>
+                </span>
+                <span class="admin-product-choice-copy">
+                  <strong>Not Featured</strong>
+                  <span>Keep this product out of the homepage featured collection.</span>
+                </span>
+              </button>
+              <button class="admin-product-feature-choice" type="button" data-product-featured="true">
+                <span class="admin-product-choice-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="m12 3 2.8 5.67 6.26.91-4.53 4.42 1.07 6.24L12 17.27 6.4 20.24l1.07-6.24L2.94 9.58l6.26-.91L12 3Z"/>
+                  </svg>
+                </span>
+                <span class="admin-product-choice-copy">
+                  <strong>Homepage Featured</strong>
+                  <span>Surface this piece in the featured collection on the landing page.</span>
+                </span>
+              </button>
             </div>
           </div>
           <div class="form-actions">
@@ -202,6 +359,17 @@
       <div class="modal-actions">
         <button class="btn-danger" id="confirmDeleteBtn">Delete</button>
         <button class="btn-outline" id="cancelDeleteBtn">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="faqDeleteModal" style="display:none">
+    <div class="modal confirm-modal">
+      <h2>Delete FAQ</h2>
+      <p>Are you sure you want to remove this question from Suspendre and Atelier?</p>
+      <div class="modal-actions">
+        <button class="btn-danger" id="confirmFaqDeleteBtn">Delete</button>
+        <button class="btn-outline" id="cancelFaqDeleteBtn">Cancel</button>
       </div>
     </div>
   </div>

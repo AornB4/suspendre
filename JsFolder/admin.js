@@ -8,10 +8,294 @@ const adminOrderFilters = {
   sort: 'newest'
 };
 
+const adminFaqFilters = {
+  visibility: 'all'
+};
+
+const AdminProductCatalog = {
+  cache: [],
+  initPromise: null,
+  initialized: false,
+
+  getClient() {
+    const db = window.SUSPENDRE_SUPABASE;
+    if (!db || !db.isConfigured()) return null;
+    return db.getClient();
+  },
+
+  async init() {
+    if (this.initPromise) return this.initPromise;
+
+    this.initPromise = (async () => {
+      const client = this.getClient();
+      if (!client) {
+        this.cache = ProductData.getAll();
+        this.initialized = true;
+        return this.getAll();
+      }
+
+      const { data, error } = await client
+        .from('products')
+        .select('id, legacy_id, slug, name, category, price, stock, description, image_url, featured, active, created_at')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Failed to load admin products.', error);
+        this.cache = ProductData.getAll();
+      } else {
+        this.cache = ProductData.normalizeCollection(Array.isArray(data) ? data : []);
+      }
+
+      this.initialized = true;
+      return this.getAll();
+    })();
+
+    return this.initPromise;
+  },
+
+  ready() {
+    return this.init();
+  },
+
+  async refresh() {
+    this.initPromise = null;
+    this.initialized = false;
+    return this.init();
+  },
+
+  getAll() {
+    return this.cache.map((product) => ({ ...product }));
+  },
+
+  getById(id) {
+    const match = this.cache.find((product) =>
+      product.id === id ||
+      product.dbId === id ||
+      product.legacyId === id ||
+      product.slug === id
+    );
+    return match ? { ...match } : null;
+  }
+};
+
+const FaqAdmin = {
+  cache: [],
+  initPromise: null,
+  initialized: false,
+
+  getClient() {
+    const db = window.SUSPENDRE_SUPABASE;
+    if (!db || !db.isConfigured()) return null;
+    return db.getClient();
+  },
+
+  async init() {
+    if (this.initPromise) return this.initPromise;
+
+    this.initPromise = (async () => {
+      const client = this.getClient();
+      if (!client) {
+        this.cache = [];
+        this.initialized = true;
+        return this.getAll();
+      }
+
+      const { data, error } = await client
+        .from('faqs')
+        .select('id, question, answer, category, active, display_order')
+        .order('display_order', { ascending: true });
+
+      if (error) {
+        console.error('Failed to load FAQs for admin.', error);
+        this.cache = [];
+      } else {
+        this.cache = Array.isArray(data) ? data.map((faq) => ({ ...faq })) : [];
+      }
+
+      this.initialized = true;
+      return this.getAll();
+    })();
+
+    return this.initPromise;
+  },
+
+  async refresh() {
+    this.initPromise = null;
+    this.initialized = false;
+    return this.init();
+  },
+
+  ready() {
+    return this.init();
+  },
+
+  getAll() {
+    return this.cache.map((faq) => ({ ...faq }));
+  },
+
+  getById(id) {
+    const match = this.cache.find((faq) => faq.id === id);
+    return match ? { ...match } : null;
+  },
+
+  async create(payload) {
+    const client = this.getClient();
+    if (!client) {
+      return { success: false, message: 'Supabase FAQ access is not configured.' };
+    }
+
+    const nextOrder = this.cache.length
+      ? Math.max(...this.cache.map((faq) => Number(faq.display_order) || 0)) + 1
+      : 1;
+
+    const { error } = await client
+      .from('faqs')
+      .insert({
+        question: payload.question,
+        answer: payload.answer,
+        category: payload.category,
+        active: payload.active,
+        display_order: nextOrder
+      });
+
+    if (error) {
+      return { success: false, message: error.message || 'Could not create FAQ.', error };
+    }
+
+    await this.refresh();
+    return { success: true };
+  },
+
+  async update(id, payload) {
+    const client = this.getClient();
+    if (!client) {
+      return { success: false, message: 'Supabase FAQ access is not configured.' };
+    }
+
+    const { error } = await client
+      .from('faqs')
+      .update({
+        question: payload.question,
+        answer: payload.answer,
+        category: payload.category,
+        active: payload.active
+      })
+      .eq('id', id);
+
+    if (error) {
+      return { success: false, message: error.message || 'Could not update FAQ.', error };
+    }
+
+    await this.refresh();
+    return { success: true };
+  },
+
+  async delete(id) {
+    const client = this.getClient();
+    if (!client) {
+      return { success: false, message: 'Supabase FAQ access is not configured.' };
+    }
+
+    const { error } = await client
+      .from('faqs')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      return { success: false, message: error.message || 'Could not delete FAQ.', error };
+    }
+
+    await this.refresh();
+    await this.resequence();
+    return { success: true };
+  },
+
+  async resequence() {
+    const client = this.getClient();
+    if (!client) return { success: false, message: 'Supabase FAQ access is not configured.' };
+
+    const updates = this.cache.map((faq, index) => ({
+      id: faq.id,
+      display_order: index + 1
+    }));
+
+    for (const update of updates) {
+      const { error } = await client
+        .from('faqs')
+        .update({ display_order: update.display_order })
+        .eq('id', update.id);
+
+      if (error) {
+        return { success: false, message: error.message || 'Could not resequence FAQs.', error };
+      }
+    }
+
+    await this.refresh();
+    return { success: true };
+  },
+
+  async move(id, direction) {
+    const client = this.getClient();
+    if (!client) {
+      return { success: false, message: 'Supabase FAQ access is not configured.' };
+    }
+
+    const currentIndex = this.cache.findIndex((faq) => faq.id === id);
+    if (currentIndex === -1) {
+      return { success: false, message: 'FAQ not found.' };
+    }
+
+    const swapIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+    if (swapIndex < 0 || swapIndex >= this.cache.length) {
+      return { success: false, message: 'FAQ is already at the edge of the list.' };
+    }
+
+    const reordered = this.getAll();
+    const [item] = reordered.splice(currentIndex, 1);
+    reordered.splice(swapIndex, 0, item);
+    const movedItem = reordered[swapIndex];
+    const swappedItem = reordered[currentIndex];
+    this.cache = reordered;
+
+    Promise.all([
+      client
+        .from('faqs')
+        .update({ display_order: swapIndex + 1 })
+        .eq('id', movedItem.id),
+      client
+        .from('faqs')
+        .update({ display_order: currentIndex + 1 })
+        .eq('id', swappedItem.id)
+    ])
+      .then(async ([movedResult, swappedResult]) => {
+        if (movedResult.error || swappedResult.error) {
+          await this.refresh();
+          renderFaqs();
+          showToast(
+            movedResult.error?.message || swappedResult.error?.message || 'Could not reorder FAQs.',
+            'error'
+          );
+        }
+      })
+      .catch(async () => {
+        await this.refresh();
+        renderFaqs();
+        showToast('Could not reorder FAQs.', 'error');
+      });
+
+    return { success: true };
+  }
+};
+
+let editingFaqId = null;
+let pendingFaqDeleteId = null;
+
 document.addEventListener('DOMContentLoaded', async () => {
   await Auth.ready();
   await ProductData.ready();
+  await AdminProductCatalog.ready();
   await Orders.ready();
+  await FaqAdmin.ready();
 
   if (!Auth.requireAdmin()) return;
   await RestockRequests.getDemandCounts(true);
@@ -19,9 +303,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   initAdminNav();
   initProductForm();
   initOrderControls();
+  initFaqManager();
   await renderDashboard();
   await renderProducts();
   renderAllOrders();
+  renderFaqs();
 });
 
 // ===== TAB NAVIGATION =====
@@ -42,6 +328,9 @@ function switchTab(tabId) {
   document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
   const target = document.getElementById(`tab-${tabId}`);
   if (target) target.classList.add('active');
+  if (tabId === 'faqs') {
+    renderFaqs();
+  }
 }
 
 function initOrderControls() {
@@ -69,6 +358,29 @@ function initOrderControls() {
       renderAllOrders();
     });
   }
+}
+
+function initFaqManager() {
+  const faqVisibilityFilter = document.getElementById('adminFaqVisibilityFilter');
+  document.getElementById('newFaqBtn')?.addEventListener('click', () => {
+    cancelFaqEdit();
+    switchTab('faqs');
+  });
+
+  document.getElementById('saveFaqBtn')?.addEventListener('click', saveFaq);
+  document.getElementById('cancelFaqEditBtn')?.addEventListener('click', cancelFaqEdit);
+  document.getElementById('confirmFaqDeleteBtn')?.addEventListener('click', confirmFaqDelete);
+  document.getElementById('cancelFaqDeleteBtn')?.addEventListener('click', closeFaqDeleteModal);
+  faqVisibilityFilter?.addEventListener('change', () => {
+    adminFaqFilters.visibility = faqVisibilityFilter.value;
+    renderFaqs();
+  });
+  document.querySelectorAll('[data-faq-visibility]').forEach((choice) => {
+    choice.addEventListener('click', () => {
+      setFaqVisibilityState(choice.dataset.faqVisibility === 'published');
+    });
+  });
+  renderFaqVisibilityState();
 }
 
 // ===== DASHBOARD =====
@@ -120,12 +432,36 @@ async function renderDashboard() {
   });
 }
 
+function getAdminProductStockState(stock) {
+  if (Number(stock) <= 0) {
+    return {
+      className: 'out',
+      label: 'Sold Out',
+      copy: 'No units available'
+    };
+  }
+
+  if (Number(stock) <= 3) {
+    return {
+      className: 'low',
+      label: 'Low Stock',
+      copy: `${Number(stock)} left in stock`
+    };
+  }
+
+  return {
+    className: 'healthy',
+    label: 'Healthy',
+    copy: `${Number(stock)} in stock`
+  };
+}
+
 // ===== PRODUCT LIST =====
 async function renderProducts() {
   const listEl = document.getElementById('adminProductsList');
   if (!listEl) return;
 
-  const products = ProductData.getAll();
+  const products = AdminProductCatalog.getAll();
   const demandCounts = await RestockRequests.getDemandCounts(true);
   listEl.innerHTML = '';
 
@@ -138,7 +474,7 @@ async function renderProducts() {
     const row = document.createElement('div');
     row.className = 'admin-product-row';
 
-    const stockClass = product.stock === 0 ? 'out' : product.stock <= 3 ? 'low' : '';
+    const stockState = getAdminProductStockState(product.stock);
     const imgSrc = ProductData.getImageSrc(product);
 
     const img = document.createElement('img');
@@ -154,15 +490,22 @@ async function renderProducts() {
     const catDiv = document.createElement('div');
     catDiv.className = 'admin-product-cat';
     catDiv.textContent = product.category;
-    infoDiv.append(nameDiv, catDiv);
+    const metaDiv = document.createElement('div');
+    metaDiv.className = 'admin-product-meta';
+    metaDiv.innerHTML = `
+      <span class="admin-product-pill ${product.active === false ? 'hidden' : ''}">${product.active === false ? 'Hidden Draft' : 'Published'}</span>
+      <span class="admin-product-pill ${stockState.className}">${stockState.label}</span>
+      ${product.featured ? '<span class="admin-product-pill featured">Featured</span>' : ''}
+    `;
+    infoDiv.append(nameDiv, catDiv, metaDiv);
 
     const priceDiv = document.createElement('div');
     priceDiv.className = 'admin-product-price';
     priceDiv.textContent = formatPrice(product.price);
 
     const stockDiv = document.createElement('div');
-    stockDiv.className = `admin-product-stock ${stockClass}`;
-    stockDiv.textContent = `Stock: ${product.stock}`;
+    stockDiv.className = `admin-product-stock ${stockState.className}`;
+    stockDiv.textContent = stockState.copy;
 
     const demandDiv = document.createElement('div');
     const demandCount = demandCounts.get(product.id) || 0;
@@ -183,6 +526,94 @@ async function renderProducts() {
 
     row.append(img, infoDiv, priceDiv, stockDiv, demandDiv, editBtn, delBtn);
     listEl.appendChild(row);
+  });
+}
+
+function renderFaqs() {
+  const listEl = document.getElementById('adminFaqList');
+  const countEl = document.getElementById('adminFaqResultsCount');
+  const noticeEl = document.getElementById('adminFaqHomepageNotice');
+  if (!listEl) return;
+
+  const allFaqs = FaqAdmin.getAll();
+  const publishedCount = allFaqs.filter((faq) => !!faq.active).length;
+  const faqs = allFaqs.filter((faq) => {
+    if (adminFaqFilters.visibility === 'published') return !!faq.active;
+    if (adminFaqFilters.visibility === 'hidden') return !faq.active;
+    return true;
+  });
+
+  if (countEl) {
+    countEl.textContent = `${faqs.length} FAQ${faqs.length === 1 ? '' : 's'}`;
+  }
+
+  if (noticeEl) {
+    noticeEl.innerHTML = publishedCount > 4
+      ? '<strong>Homepage curation</strong><span>You currently have more than 4 published FAQs. The homepage will only show the first 4 by position.</span>'
+      : `<strong>Homepage curation</strong><span>The homepage currently surfaces the first 4 published FAQs by position. ${publishedCount} published right now.</span>`;
+  }
+
+  if (faqs.length === 0) {
+    listEl.innerHTML = '<p class="admin-faq-empty">No FAQs match the current filter. Adjust visibility or add a new one from the editor.</p>';
+    return;
+  }
+
+  listEl.innerHTML = '';
+  faqs.forEach((faq, index) => {
+    const item = document.createElement('article');
+    item.className = 'admin-faq-item';
+    item.innerHTML = `
+      <div class="admin-faq-item-header">
+        <div class="admin-faq-item-copy">
+          <h3>${safeString(faq.question)}</h3>
+          <div class="admin-faq-meta">
+            <span class="admin-faq-pill active">${safeString(formatTitleCase(faq.category || 'general'))}</span>
+            <span class="admin-faq-pill ${faq.active ? 'active' : 'inactive'}">${faq.active ? 'Published' : 'Hidden'}</span>
+          </div>
+        </div>
+        <span class="admin-faq-order">Position ${index + 1}</span>
+      </div>
+      <p class="admin-faq-answer">${safeString(faq.answer)}</p>
+      <div class="admin-faq-actions">
+        <div class="admin-faq-reorder">
+          <button class="btn-faq-lite" type="button" data-faq-move="up" ${index === 0 ? 'disabled' : ''}>
+            <span class="admin-faq-arrow" aria-hidden="true">↑</span>
+            <span>Move Up</span>
+          </button>
+          <button class="btn-faq-lite" type="button" data-faq-move="down" ${index === faqs.length - 1 ? 'disabled' : ''}>
+            <span class="admin-faq-arrow" aria-hidden="true">↓</span>
+            <span>Move Down</span>
+          </button>
+        </div>
+        <div class="admin-faq-manage">
+          <button class="btn-edit" type="button" data-faq-edit>Edit</button>
+          <button class="btn-del" type="button" data-faq-delete>Delete</button>
+        </div>
+      </div>
+    `;
+
+    item.querySelector('[data-faq-edit]')?.addEventListener('click', () => openFaqEdit(faq.id));
+    item.querySelector('[data-faq-delete]')?.addEventListener('click', () => openFaqDeleteModal(faq.id));
+    item.querySelector('[data-faq-move="up"]')?.addEventListener('click', async () => {
+      const result = await FaqAdmin.move(faq.id, 'up');
+      if (!result.success) {
+        showToast(result.message || 'Could not reorder FAQ.', 'error');
+        return;
+      }
+      renderFaqs();
+      showToast('FAQ moved up.', 'success');
+    });
+    item.querySelector('[data-faq-move="down"]')?.addEventListener('click', async () => {
+      const result = await FaqAdmin.move(faq.id, 'down');
+      if (!result.success) {
+        showToast(result.message || 'Could not reorder FAQ.', 'error');
+        return;
+      }
+      renderFaqs();
+      showToast('FAQ moved down.', 'success');
+    });
+
+    listEl.appendChild(item);
   });
 }
 
@@ -282,10 +713,22 @@ function initProductForm() {
 
   if (saveBtn) saveBtn.addEventListener('click', saveProduct);
   if (cancelBtn) cancelBtn.addEventListener('click', cancelEdit);
+  document.querySelectorAll('[data-product-visibility]').forEach((choice) => {
+    choice.addEventListener('click', () => {
+      setProductVisibilityState(choice.dataset.productVisibility === 'published');
+    });
+  });
+  document.querySelectorAll('[data-product-featured]').forEach((choice) => {
+    choice.addEventListener('click', () => {
+      setProductFeaturedState(choice.dataset.productFeatured === 'true');
+    });
+  });
+  renderProductVisibilityState();
+  renderProductFeaturedState();
 }
 
 function openEditForm(productId) {
-  const product = ProductData.getById(productId);
+  const product = AdminProductCatalog.getById(productId);
   if (!product) return;
 
   editingId = productId;
@@ -297,7 +740,8 @@ function openEditForm(productId) {
   setValue('prodStock', product.stock);
   setValue('prodDesc', product.description);
   setValue('prodImage', product.image || '');
-  document.getElementById('prodFeatured').checked = !!product.featured;
+  setProductFeaturedState(!!product.featured);
+  setProductVisibilityState(product.active !== false);
 
   const cancelBtn = document.getElementById('cancelEditBtn');
   if (cancelBtn) cancelBtn.style.display = '';
@@ -322,6 +766,38 @@ function cancelEdit() {
   });
 }
 
+function setProductVisibilityState(isPublished) {
+  const activeEl = document.getElementById('prodActive');
+  if (activeEl) {
+    activeEl.value = isPublished ? 'true' : 'false';
+  }
+  renderProductVisibilityState();
+}
+
+function renderProductVisibilityState() {
+  const isPublished = String(document.getElementById('prodActive')?.value || 'true') === 'true';
+  document.querySelectorAll('[data-product-visibility]').forEach((choice) => {
+    const isChoicePublished = choice.dataset.productVisibility === 'published';
+    choice.classList.toggle('active', isChoicePublished === isPublished);
+  });
+}
+
+function setProductFeaturedState(isFeatured) {
+  const featuredEl = document.getElementById('prodFeatured');
+  if (featuredEl) {
+    featuredEl.value = isFeatured ? 'true' : 'false';
+  }
+  renderProductFeaturedState();
+}
+
+function renderProductFeaturedState() {
+  const isFeatured = String(document.getElementById('prodFeatured')?.value || 'false') === 'true';
+  document.querySelectorAll('[data-product-featured]').forEach((choice) => {
+    const isChoiceFeatured = choice.dataset.productFeatured === 'true';
+    choice.classList.toggle('active', isChoiceFeatured === isFeatured);
+  });
+}
+
 async function saveProduct() {
   const name     = getValue('prodName').trim();
   const category = getValue('prodCategory');
@@ -329,7 +805,8 @@ async function saveProduct() {
   const stock    = parseInt(getValue('prodStock'), 10);
   const desc     = getValue('prodDesc').trim();
   const image    = getValue('prodImage').trim();
-  const featured = document.getElementById('prodFeatured')?.checked || false;
+  const featured = String(document.getElementById('prodFeatured')?.value || 'false') === 'true';
+  const active   = String(document.getElementById('prodActive')?.value || 'true') === 'true';
   const saveBtn = document.getElementById('saveProductBtn');
 
   if (!name)          { showToast('Please enter a product name.', 'error'); return; }
@@ -337,7 +814,7 @@ async function saveProduct() {
   if (isNaN(stock) || stock < 0)  { showToast('Please enter a valid stock quantity.', 'error'); return; }
   if (!desc)          { showToast('Please enter a description.', 'error'); return; }
 
-  const productData = { name, category, price, stock, description: desc, image, featured };
+  const productData = { name, category, price, stock, description: desc, image, featured, active };
   const originalLabel = saveBtn ? saveBtn.textContent : '';
 
   if (saveBtn) {
@@ -375,7 +852,8 @@ async function saveProduct() {
   }
 
   clearForm();
-  await ProductData.ready();
+  await ProductData.refresh();
+  await AdminProductCatalog.refresh();
   await renderProducts();
   await renderDashboard();
 
@@ -393,8 +871,8 @@ async function saveProduct() {
 function clearForm() {
   ['prodName','prodPrice','prodStock','prodDesc','prodImage'].forEach(id => setValue(id, ''));
   setValue('prodCategory', 'wood');
-  const feat = document.getElementById('prodFeatured');
-  if (feat) feat.checked = false;
+  setProductFeaturedState(false);
+  setProductVisibilityState(true);
 }
 
 // ===== DELETE MODAL =====
@@ -411,7 +889,7 @@ function openDeleteModal(productId) {
 
 async function confirmDelete() {
   if (!pendingDeleteId) return;
-  const product = ProductData.getById(pendingDeleteId);
+  const product = AdminProductCatalog.getById(pendingDeleteId);
   const result = await ProductData.delete(pendingDeleteId, { remote: true });
   if (!result.success) {
     showToast(result.message || 'Could not delete product.', 'error');
@@ -420,10 +898,153 @@ async function confirmDelete() {
 
   pendingDeleteId = null;
   closeDeleteModal();
-  await ProductData.ready();
+  await ProductData.refresh();
+  await AdminProductCatalog.refresh();
   await renderProducts();
   await renderDashboard();
   showToast(product ? `"${product.name}" deleted.` : 'Product deleted.', 'success');
+}
+
+function openFaqEdit(faqId) {
+  const faq = FaqAdmin.getById(faqId);
+  if (!faq) return;
+
+  editingFaqId = faqId;
+  setText('faqFormTitle', 'Edit FAQ');
+  setText('faqFormSubcopy', 'Adjust the question, answer, category, or visibility for this entry.');
+  setValue('faqQuestion', faq.question || '');
+  setValue('faqCategory', faq.category || 'products');
+  setValue('faqAnswer', faq.answer || '');
+  setFaqVisibilityState(!!faq.active);
+  const cancelBtn = document.getElementById('cancelFaqEditBtn');
+  if (cancelBtn) cancelBtn.style.display = '';
+  renderFaqVisibilityState();
+
+  switchTab('faqs');
+  document.querySelectorAll('.admin-nav-item').forEach((n) => {
+    n.classList.toggle('active', n.dataset.tab === 'faqs');
+  });
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function cancelFaqEdit() {
+  editingFaqId = null;
+  setText('faqFormTitle', 'Add New FAQ');
+  setText('faqFormSubcopy', 'Write a clear answer that can work both on the homepage and inside Atelier.');
+  setValue('faqQuestion', '');
+  setValue('faqCategory', 'products');
+  setValue('faqAnswer', '');
+  setFaqVisibilityState(true);
+  const cancelBtn = document.getElementById('cancelFaqEditBtn');
+  if (cancelBtn) cancelBtn.style.display = 'none';
+  renderFaqVisibilityState();
+}
+
+function setFaqVisibilityState(isPublished) {
+  const activeEl = document.getElementById('faqActive');
+  if (activeEl) {
+    activeEl.value = isPublished ? 'true' : 'false';
+  }
+
+  document.querySelectorAll('[data-faq-visibility]').forEach((choice) => {
+    const choicePublished = choice.dataset.faqVisibility === 'published';
+    choice.classList.toggle('active', choicePublished === isPublished);
+  });
+}
+
+function renderFaqVisibilityState() {
+  const activeEl = document.getElementById('faqActive');
+  const labelEl = document.getElementById('faqVisibilityLabel');
+  const helpEl = document.getElementById('faqVisibilityHelp');
+  const isPublished = String(activeEl?.value || 'true') === 'true';
+
+  if (labelEl) {
+    labelEl.textContent = isPublished ? 'Published' : 'Hidden Draft';
+  }
+
+  if (helpEl) {
+    helpEl.textContent = isPublished
+      ? 'Visible on the homepage and inside Atelier.'
+      : 'Saved for editing only and hidden from the storefront.';
+  }
+}
+
+async function saveFaq() {
+  const question = getValue('faqQuestion').trim();
+  const category = getValue('faqCategory');
+  const answer = getValue('faqAnswer').trim();
+  const active = String(document.getElementById('faqActive')?.value || 'true') === 'true';
+  const saveBtn = document.getElementById('saveFaqBtn');
+  const isEditing = !!editingFaqId;
+
+  if (!question) {
+    showToast('Please enter an FAQ question.', 'error');
+    return;
+  }
+  if (!answer) {
+    showToast('Please enter an FAQ answer.', 'error');
+    return;
+  }
+
+  const originalLabel = saveBtn ? saveBtn.textContent : '';
+  if (saveBtn) {
+    saveBtn.disabled = true;
+    saveBtn.textContent = editingFaqId ? 'Saving Changes...' : 'Saving FAQ...';
+  }
+
+  const payload = { question, category, answer, active };
+  const result = isEditing
+    ? await FaqAdmin.update(editingFaqId, payload)
+    : await FaqAdmin.create(payload);
+
+  if (!result.success) {
+    showToast(result.message || 'Could not save FAQ.', 'error');
+    if (saveBtn) {
+      saveBtn.disabled = false;
+      saveBtn.textContent = originalLabel;
+    }
+    return;
+  }
+
+  renderFaqs();
+  cancelFaqEdit();
+  showToast(isEditing ? 'FAQ updated successfully.' : 'FAQ added successfully.', 'success');
+
+  if (saveBtn) {
+    saveBtn.disabled = false;
+    saveBtn.textContent = originalLabel;
+  }
+}
+
+function openFaqDeleteModal(faqId) {
+  pendingFaqDeleteId = faqId;
+  const modal = document.getElementById('faqDeleteModal');
+  if (modal) modal.style.display = 'flex';
+}
+
+function closeFaqDeleteModal() {
+  pendingFaqDeleteId = null;
+  const modal = document.getElementById('faqDeleteModal');
+  if (modal) modal.style.display = 'none';
+}
+
+async function confirmFaqDelete() {
+  if (!pendingFaqDeleteId) return;
+
+  const faq = FaqAdmin.getById(pendingFaqDeleteId);
+  const result = await FaqAdmin.delete(pendingFaqDeleteId);
+  if (!result.success) {
+    showToast(result.message || 'Could not delete FAQ.', 'error');
+    return;
+  }
+
+  if (editingFaqId === pendingFaqDeleteId) {
+    cancelFaqEdit();
+  }
+
+  closeFaqDeleteModal();
+  renderFaqs();
+  showToast(faq ? `Removed "${faq.question}".` : 'FAQ deleted.', 'success');
 }
 
 function closeDeleteModal() {
